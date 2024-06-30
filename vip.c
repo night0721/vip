@@ -3,11 +3,14 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
-#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
 
-#define VERSION "0.0.1"
+#include "vip.h"
+#include "term.h"
+#include "bar.h"
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
@@ -23,52 +26,16 @@ enum editorKey {
 	PAGE_DOWN
 };
 
-struct editor_config {
-	int cx, cy; /* cursor x, y*/
-	int screenrows, screencols;
-	struct termios orig_termios;
-};
-
-struct editor_config config;
-
-void die(const char *s)
-{
-	write(STDOUT_FILENO, "\x1b[2J", 4);
-	write(STDOUT_FILENO, "\x1b[H", 3);
-	perror(s);
-	exit(1);
-}
-
-void disable_raw_mode()
-{
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &config.orig_termios) == -1)
-		die("tcsetattr");
-}
-
-void enable_raw_mode()
-{
-	if (tcgetattr(STDIN_FILENO, &config.orig_termios) == -1)
-		die("tcgetattr");
-	atexit(disable_raw_mode);
-
-	struct termios raw = config.orig_termios;
-	/* disbable echo, line output and signals */
-	raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-	raw.c_oflag &= ~(OPOST);
-	raw.c_cflag |= (CS8);
-	raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-	raw.c_cc[VMIN] = 0;
-	raw.c_cc[VTIME] = 1;
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
-		die("tcsetattr");
-}
+editor vip;
 
 int read_key()
 {
 	int nread;
 	char c;
 	while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
-		if (nread == -1 && errno != EAGAIN) die("read");
+		if (nread == -1 && errno != EAGAIN) {
+			die("read");
+		}
 	}
 	if (c == 'k') return ARROW_UP;
 	if (c == 'j') return ARROW_DOWN;
@@ -78,12 +45,15 @@ int read_key()
 	if (c == '\x1b') {
 		char seq[3];
 
-		if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
-		if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
+		if (read(STDIN_FILENO, &seq[0], 1) != 1)
+			return '\x1b';
+		if (read(STDIN_FILENO, &seq[1], 1) != 1)
+			return '\x1b';
 
 		if (seq[0] == '[') {
 			if (seq[1] >= '0' && seq[1] <= '9') {
-				if (read(STDIN_FILENO, &seq[2], 1) != 1) return '\x1b';
+				if (read(STDIN_FILENO, &seq[2], 1) != 1)
+					return '\x1b';
 				if (seq[2] == '~') {
 					switch (seq[1]) {
 						case '1': return HOME_KEY;
@@ -117,46 +87,79 @@ int read_key()
 	}
 }
 
-int get_cursor_position(int *rows, int *cols)
+int row_cx_to_rx(row *row, int cx)
 {
-	char buf[32];
-	unsigned int i = 0;
-	if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4)
-		return -1;
-	while (i < sizeof(buf) - 1) {
-		if (read(STDIN_FILENO, &buf[i], 1) != 1)
-			break;
-		if (buf[i] == 'R')
-			break;
-		i++;
+	int rx = 0;
+	for (int j = 0; j < cx; j++) {
+		if (row->chars[j] == '\t') {
+			rx += (TAB_SIZE - 1) - (rx % TAB_SIZE);
+		}
+		rx++;
 	}
-	buf[i] = '\0';
-	if (buf[0] != '\x1b' || buf[1] != '[')
-		return -1;
-	if (sscanf(&buf[2], "%d;%d", rows, cols) != 2)
-		return -1;
-	return 0;
+	return rx;
 }
 
-int get_window_size(int *rows, int *cols)
+void update_row(row *row)
 {
-	struct winsize ws;
-	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-		if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) return -1;
-		return get_cursor_position(rows, cols);
-	} else {
-		*cols = ws.ws_col;
-		*rows = ws.ws_row;
-		return 0;
+	int tabs = 0;
+	for (int j = 0; j < row->size; j++)
+		if (row->chars[j] == '\t') tabs++;
+	free(row->render);
+	row->render = malloc(row->size + tabs * (TAB_SIZE - 1) + 1);
+	int idx = 0;
+	for (int j = 0; j < row->size; j++) {
+		if (row->chars[j] == '\t') {
+			row->render[idx++] = ' ';
+			while (idx % TAB_SIZE != 0) {
+				row->render[idx++] = ' ';
+			}
+		}
+		else {
+			row->render[idx++] = row->chars[j];
+		}
 	}
+	row->render[idx] = '\0';
+	row->render_size = idx;
 }
 
-struct abuf {
-	char *b;
-	int len;
-};
+void append_row(char *s, size_t len)
+{
+	vip.row = realloc(vip.row, sizeof(row) * (vip.rows + 1));
 
-#define ABUF_INIT {NULL, 0}
+	int at = vip.rows;
+	vip.row[at].size = len;
+	vip.row[at].chars = malloc(len + 1);
+	memcpy(vip.row[at].chars, s, len);
+	vip.row[at].chars[len] = '\0';
+
+	vip.row[at].render_size = 0;
+	vip.row[at].render = NULL;
+	update_row(&vip.row[at]);
+
+	vip.rows++;
+}
+
+void open_editor(char *filename)
+{
+	free(vip.filename);
+	vip.filename = strdup(filename);
+	FILE *fp = fopen(filename, "r");
+	if (!fp) {
+		die("fopen");
+	}
+	char *line = NULL;
+	size_t linecap = 0;
+	ssize_t len;
+	while ((len = getline(&line, &linecap, fp)) != -1) {
+		/* remove new line and carriage return at end of line */
+		while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
+			len--;
+		}
+		append_row(line, len);
+	}
+	free(line);
+	fclose(fp);
+}
 
 void abAppend(struct abuf *ab, const char *s, int len)
 {
@@ -172,41 +175,75 @@ void abFree(struct abuf *ab)
 	free(ab->b);
 }
 
-void draw_rows(struct abuf *ab) {
-	for (int y = 0; y < config.screenrows; y++) {
-		if (y == config.screenrows / 3) {
-			char welcome[80];
-			int welcomelen = snprintf(welcome, sizeof(welcome),
-					"VIP v%s", VERSION);
-			if (welcomelen > config.screencols) welcomelen = config.screencols;
-			int padding = (config.screencols - welcomelen) / 2;
-			if (padding) {
-				abAppend(ab, "~", 1);
-				padding--;
-			}
-			while (padding--) abAppend(ab, " ", 1);
-			abAppend(ab, welcome, welcomelen);
-		} else {
-			abAppend(ab, "~", 1);
-		}		abAppend(ab, "\x1b[K", 3);
+void scroll()
+{
+	vip.rx = 0;
+	if (vip.cy < vip.rows) {
+		vip.rx = row_cx_to_rx(&vip.row[vip.cy], vip.cx);
+	}
+	if (vip.cy < vip.rowoff) {
+		vip.rowoff = vip.cy;
+	}
+	if (vip.cy >= vip.rowoff + vip.screenrows) {
+		vip.rowoff = vip.cy - vip.screenrows + 1;
+	}
+	if (vip.rx < vip.coloff) {
+		vip.coloff = vip.rx;
+	}
+	if (vip.rx >= vip.coloff + vip.screencols) {
+		vip.coloff = vip.rx - vip.screencols + 1;
+	}
+}
 
-		if (y < config.screenrows - 1) {
-			abAppend(ab, "\r\n", 2);
+void draw_rows(struct abuf *ab)
+{
+	for (int y = 0; y < vip.screenrows; y++) {
+		int filerow = y + vip.rowoff;
+		if (filerow >= vip.rows) {
+			if (vip.rows == 0 && y == vip.screenrows / 3) {
+				char welcome[11];
+				int welcomelen = snprintf(welcome, sizeof(welcome),
+						"VIP v%s", VERSION);
+				if (welcomelen > vip.screencols)
+					welcomelen = vip.screencols;
+				int padding = (vip.screencols - welcomelen) / 2;
+				if (padding) {
+					abAppend(ab, "~", 1);
+					padding--;
+				}
+				while (padding--) abAppend(ab, " ", 1);
+				abAppend(ab, welcome, welcomelen);
+			} else {
+				abAppend(ab, "~", 1);
+			}
+		} else {
+			int len = vip.row[filerow].render_size - vip.coloff;
+			if (len < 0) len = 0;
+			if (len > vip.screencols) len = vip.screencols;
+			abAppend(ab, &vip.row[filerow].render[vip.coloff], len);
 		}
+
+		abAppend(ab, "\x1b[K", 3);
+		abAppend(ab, "\r\n", 2);
 	}
 }
 
 void refresh_screen()
 {
+	scroll();
+
 	struct abuf ab = ABUF_INIT;
 
 	abAppend(&ab, "\x1b[?25l", 6);
 	abAppend(&ab, "\x1b[H", 3);
 
 	draw_rows(&ab);
+	draw_status_bar(&ab);
+	draw_message_bar(&ab);
 
 	char buf[32];
-	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", config.cy + 1, config.cx + 1);
+	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (vip.cy - vip.rowoff) + 1,
+			(vip.rx - vip.coloff) + 1);
 	abAppend(&ab, buf, strlen(buf));
 
 	abAppend(&ab, "\x1b[?25h", 6);
@@ -215,28 +252,35 @@ void refresh_screen()
 	abFree(&ab);
 }
 
-void move_cursor(int key) {
+void move_cursor(int key)
+{
+	row *row = (vip.cy >= vip.rows) ? NULL : &vip.row[vip.cy];
 	switch (key) {
 		case ARROW_LEFT:
-			if (config.cx != 0) {
-				config.cx--;
+			if (vip.cx != 0) {
+				vip.cx--;
 			}
 			break;
 		case ARROW_RIGHT:
-			if (config.cx != config.screencols - 1) {
-				config.cx++;
+			if (row && vip.cx < row->size) {
+				vip.cx++;
 			}
 			break;
 		case ARROW_UP:
-			if (config.cy != 0) {
-				config.cy--;
+			if (vip.cy != 0) {
+				vip.cy--;
 			}
 			break;
 		case ARROW_DOWN:
-			if (config.cy != config.screenrows - 1) {
-				config.cy++;
+			if (vip.cy < vip.rows) {
+				vip.cy++;
 			}
 			break;
+	}
+	row = (vip.cy >= vip.rows) ? NULL : &vip.row[vip.cy];
+	int rowlen = row ? row->size : 0;
+	if (vip.cx > rowlen) {
+		vip.cx = rowlen;
 	}
 }
 
@@ -251,15 +295,23 @@ void process_key()
 			break;
 
 		case HOME_KEY:
-			config.cx = 0;
+			vip.cx = 0;
 			break;
 		case END_KEY:
-			config.cx = config.screencols - 1;
+			if (vip.cy < vip.rows) {
+				vip.cx = vip.row[vip.cy].size;
+			}
 			break;
 		case PAGE_UP:
 		case PAGE_DOWN:
 			{
-				int times = config.screenrows;
+				if (c == PAGE_UP) {
+					vip.cy = vip.rowoff;
+				} else if (c == PAGE_DOWN) {
+					vip.cy = vip.rowoff + vip.screenrows - 1;
+					if (vip.cy > vip.rows) vip.cy = vip.rows;
+				}
+				int times = vip.screenrows;
 				while (times--)
 					move_cursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
 			}
@@ -276,16 +328,32 @@ void process_key()
 
 void init_editor()
 {
-	config.cx = 0;
-	config.cy = 0;
-	if (get_window_size(&config.screenrows, &config.screencols) == -1)
+	vip.cx = 0;
+	vip.cy = 0;
+	vip.rx = 0;
+	vip.rowoff = 0;
+	vip.coloff = 0;
+	vip.rows = 0;
+	vip.row = NULL;
+	vip.filename = NULL;
+	vip.statusmsg[0] = '\0';
+	vip.statusmsg_time = 0;
+
+	if (get_window_size(&vip.screenrows, &vip.screencols) == -1) {
 		die("get_window_size");
+	}
+	vip.screenrows -= 2;
 }
 
-int main()
+int main(int argc, char **argv)
 {
-	enable_raw_mode();
+	setup_term();
 	init_editor();
+	if (argc >= 2) {
+		open_editor(argv[1]);
+	}
+
+	set_status_bar_message("Ctrl-Q = Quit");
 
 	while (1) {
 		refresh_screen();

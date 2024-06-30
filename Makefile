@@ -8,9 +8,9 @@ PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
 
 # Flags
-CFLAGS = -O3 -march=native -mtune=native -pipe -s -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
+CFLAGS = -O3 -march=native -mtune=native -pipe -s -flto -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
 
-SRC = vip.c
+SRC = vip.c term.c bar.c
 
 $(TARGET): $(SRC)
 	$(CC) $(SRC) -o $@ $(CFLAGS)
