@@ -139,6 +139,18 @@ void append_row(char *s, size_t len)
 	vip.rows++;
 }
 
+void row_insert_char(row *row, int at, int c)
+{
+	if (at < 0 || at > row->size) {
+		at = row->size;
+	}
+	row->chars = realloc(row->chars, row->size + 2);
+	memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
+	row->size++;
+	row->chars[at] = c;
+	update_row(row);
+}
+
 void open_editor(char *filename)
 {
 	free(vip.filename);

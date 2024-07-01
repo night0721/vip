@@ -6,14 +6,16 @@ VERSION = 1.0
 TARGET = vip
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
+MANDIR = $(PREFIX)/share/man/man1
 
 # Flags
 CFLAGS = -O3 -march=native -mtune=native -pipe -s -flto -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
 
-SRC = vip.c term.c bar.c
+SRC = src/*.c
+INCLUDE = include
 
 $(TARGET): $(SRC)
-	$(CC) $(SRC) -o $@ $(CFLAGS)
+	$(CC) $(SRC) -o $@ $(CFLAGS) -I$(INCLUDE)
 
 dist:
 	mkdir -p $(TARGET)-$(VERSION)
