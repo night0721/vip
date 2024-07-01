@@ -11,10 +11,12 @@
 #include "vip.h"
 #include "term.h"
 #include "bar.h"
+#include "editor.h"
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 enum editorKey {
+	BACKSPACE = 127,
 	ARROW_LEFT = 1000,
 	ARROW_RIGHT,
 	ARROW_UP,
@@ -300,6 +302,10 @@ void process_key()
 {
 	int c = read_key();
 	switch (c) {
+		case '\r':
+			/* TBC */
+			break;
+
 		case CTRL_KEY('q'):
 			write(STDOUT_FILENO, "\x1b[2J", 4);
 			write(STDOUT_FILENO, "\x1b[H", 3);
@@ -309,11 +315,19 @@ void process_key()
 		case HOME_KEY:
 			vip.cx = 0;
 			break;
+
 		case END_KEY:
 			if (vip.cy < vip.rows) {
 				vip.cx = vip.row[vip.cy].size;
 			}
 			break;
+
+		case BACKSPACE:
+		case CTRL_KEY('h'):
+		case DEL_KEY:
+			/* TBC */
+			break;
+
 		case PAGE_UP:
 		case PAGE_DOWN:
 			{
@@ -334,6 +348,14 @@ void process_key()
 		case ARROW_LEFT:
 		case ARROW_RIGHT:
 			move_cursor(c);
+			break;
+
+		case CTRL_KEY('l'):
+		case '\x1b':
+			break;
+
+		default:
+			insert_char(c);
 			break;
 	}
 }

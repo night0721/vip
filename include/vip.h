@@ -39,6 +39,9 @@ struct abuf {
 
 void abAppend(struct abuf *ab, const char *s, int len);
 
+void append_row(char *s, size_t len);
+void row_insert_char(row *row, int at, int c);
+
 extern editor vip;
 
 #endif
