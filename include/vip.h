@@ -7,6 +7,19 @@
 /* CONFIG */
 #define TAB_SIZE 4
 
+/* number of times of warning before quitting when there is modified text */
+#define QUIT_CONFIRM 2
+
+/* THEME */
+/* 38 and 48 is reversed as bar's color is reversed */
+#define SURFACE_1_BG "\x1b[38;2;49;50;68m"
+#define BLACK_BG "\x1b[38;2;0;0;0m"
+#define BLACK_FG "\x1b[48;2;0;0;0m"
+#define WHITE_FG "\x1b[48;2;255;255;255m"
+#define BLUE_FG "\x1b[48;2;137;180;250m"
+#define BLUE_BG "\x1b[38;2;137;180;250m"
+#define GREEN_FG "\x1b[48;2;166;227;161m"
+
 #define VERSION "0.0.1"
 
 typedef struct row {
@@ -24,6 +37,7 @@ typedef struct editor {
 	int screenrows, screencols;
 	int rows;
 	row *row;
+	int dirty;
 	char *filename;
 	char statusmsg[80];
 	time_t statusmsg_time;

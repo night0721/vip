@@ -11,29 +11,42 @@ void draw_status_bar(struct abuf *ab)
 {
 	abAppend(ab, "\x1b[7m", 4);
 	abAppend(ab, "\x1b[1m", 4);
-	abAppend(ab, "\x1b[38;2;137;180;250m", 19);
+	abAppend(ab, BLUE_BG, 19);
 
 	char mode[9] = " NORMAL ";
 	int mode_len = 8;
 	abAppend(ab, mode, 8);
-
-	char file[80], lines[80];
-	int file_len = snprintf(file, sizeof(file), " %.20s ", 
-			vip.filename ? vip.filename : "[No Name]");
-	int lines_len = snprintf(lines, sizeof(lines), "%dL | %d:%d", vip.rows,
-			vip.cy + 1, vip.rx + 1);
-
-	abAppend(ab, "\x1b[38;2;49;50;68m", 16);
 	abAppend(ab, "\x1b[22m", 5);
-	abAppend(ab, "\x1b[48;2;137;180;250m", 19);
+
+	char git_branch[80], git_diff[80], file[80], lines[80], coord[80];
+	int gitb_len = snprintf(git_branch, sizeof(git_branch), " %s ", "master");
+	int gitd_len = snprintf(git_diff, sizeof(git_diff), " %s ", "+1");
+	int file_len = snprintf(file, sizeof(file), " %.20s %s",
+			vip.filename ? vip.filename : "[No Name]", vip.dirty ? "[+]" : "");
+	int lines_len = snprintf(lines, sizeof(lines), " %dL ", vip.rows);
+	int coord_len = snprintf(coord, sizeof(coord), " %d:%d ", vip.cy + 1, vip.rx + 1);
+
+	abAppend(ab, SURFACE_1_BG, 16); /* background */
+	abAppend(ab, BLUE_FG, 19); /* text */
+	abAppend(ab, git_branch, gitb_len);
+	abAppend(ab, "|", 1);
+	abAppend(ab, GREEN_FG, 19);
+	abAppend(ab, git_diff, gitd_len);
+	abAppend(ab, BLACK_BG, 13);
+	abAppend(ab, WHITE_FG, 19);
 	abAppend(ab, file, file_len);
-	abAppend(ab, "\x1b[38;2;0;0;0m", 13);
 
 
 	while (file_len < vip.screencols) {
-		if (vip.screencols - mode_len - file_len == lines_len) {
-			abAppend(ab, "\x1b[48;2;255;255;255m", 19);
+		if (vip.screencols - mode_len - file_len - gitb_len - gitd_len - 1 == lines_len + coord_len) {
+			abAppend(ab, SURFACE_1_BG, 16);
+			abAppend(ab, BLUE_FG, 19);
 			abAppend(ab, lines, lines_len);
+			abAppend(ab, BLUE_BG, 19);
+			abAppend(ab, BLACK_FG, 13);
+			abAppend(ab, "\x1b[1m", 4);
+			abAppend(ab, coord, coord_len);
+			abAppend(ab, "\x1b[22m", 5);
 			break;
 		} else {
 			abAppend(ab, " ", 1);

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -139,6 +140,7 @@ void append_row(char *s, size_t len)
 	update_row(&vip.row[at]);
 
 	vip.rows++;
+	vip.dirty++;
 }
 
 void row_insert_char(row *row, int at, int c)
@@ -151,6 +153,25 @@ void row_insert_char(row *row, int at, int c)
 	row->size++;
 	row->chars[at] = c;
 	update_row(row);
+	vip.dirty++;
+}
+
+char *rows_to_str(int *buflen)
+{
+	int total_len = 0;
+	for (int j = 0; j < vip.rows; j++) {
+		total_len += vip.row[j].size + 1;
+	}
+	*buflen = total_len;
+	char *buf = malloc(total_len);
+	char *p = buf;
+	for (int j = 0; j < vip.rows; j++) {
+		memcpy(p, vip.row[j].chars, vip.row[j].size);
+		p += vip.row[j].size;
+		*p = '\n';
+		p++;
+	}
+	return buf;
 }
 
 void open_editor(char *filename)
@@ -173,6 +194,30 @@ void open_editor(char *filename)
 	}
 	free(line);
 	fclose(fp);
+	/* reset dirtiness as nothing is modified yet */
+	vip.dirty = 0;
+}
+
+void save_file()
+{
+	if (vip.filename == NULL) return;
+	int len;
+	char *buf = rows_to_str(&len);
+	int fd = open(vip.filename, O_RDWR | O_CREAT, 0644);
+	if (fd != -1) {
+		if (ftruncate(fd, len) != -1) {
+			if (write(fd, buf, len) == len) {
+				close(fd);
+				free(buf);
+				vip.dirty = 0;
+				set_status_bar_message("\"%s\" %dL, %dB written", vip.filename, vip.rows, len);
+				return;
+			}
+		}
+		close(fd);
+	}
+	free(buf);
+	set_status_bar_message("Error saving: %s", strerror(errno));
 }
 
 void abAppend(struct abuf *ab, const char *s, int len)
@@ -300,6 +345,7 @@ void move_cursor(int key)
 
 void process_key()
 {
+	static int quit_times = QUIT_CONFIRM
 	int c = read_key();
 	switch (c) {
 		case '\r':
@@ -307,9 +353,18 @@ void process_key()
 			break;
 
 		case CTRL_KEY('q'):
+			if (vip.dirty && quit_times > 0) {
+				set_status_bar_message("No write since last change for buffer \"%s\"", vip.filename);
+				quit_times--;
+				return;
+			}
 			write(STDOUT_FILENO, "\x1b[2J", 4);
 			write(STDOUT_FILENO, "\x1b[H", 3);
 			exit(0);
+			break;
+
+		case CTRL_KEY('s'):
+			save_file();
 			break;
 
 		case HOME_KEY:
@@ -358,6 +413,7 @@ void process_key()
 			insert_char(c);
 			break;
 	}
+	quit_times = QUIT_CONFIRM;
 }
 
 void init_editor()
@@ -369,6 +425,7 @@ void init_editor()
 	vip.coloff = 0;
 	vip.rows = 0;
 	vip.row = NULL;
+	vip.dirty = 0;
 	vip.filename = NULL;
 	vip.statusmsg[0] = '\0';
 	vip.statusmsg_time = 0;
@@ -387,7 +444,7 @@ int main(int argc, char **argv)
 		open_editor(argv[1]);
 	}
 
-	set_status_bar_message("Ctrl-Q = Quit");
+	set_status_bar_message("Ctrl-S: Save, Ctrl-Q:Quit");
 
 	while (1) {
 		refresh_screen();
