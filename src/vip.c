@@ -13,6 +13,7 @@
 #include "term.h"
 #include "bar.h"
 #include "editor.h"
+#include "row.h"
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
@@ -90,90 +91,6 @@ int read_key()
 	}
 }
 
-int row_cx_to_rx(row *row, int cx)
-{
-	int rx = 0;
-	for (int j = 0; j < cx; j++) {
-		if (row->chars[j] == '\t') {
-			rx += (TAB_SIZE - 1) - (rx % TAB_SIZE);
-		}
-		rx++;
-	}
-	return rx;
-}
-
-void update_row(row *row)
-{
-	int tabs = 0;
-	for (int j = 0; j < row->size; j++)
-		if (row->chars[j] == '\t') tabs++;
-	free(row->render);
-	row->render = malloc(row->size + tabs * (TAB_SIZE - 1) + 1);
-	int idx = 0;
-	for (int j = 0; j < row->size; j++) {
-		if (row->chars[j] == '\t') {
-			row->render[idx++] = ' ';
-			while (idx % TAB_SIZE != 0) {
-				row->render[idx++] = ' ';
-			}
-		}
-		else {
-			row->render[idx++] = row->chars[j];
-		}
-	}
-	row->render[idx] = '\0';
-	row->render_size = idx;
-}
-
-void append_row(char *s, size_t len)
-{
-	vip.row = realloc(vip.row, sizeof(row) * (vip.rows + 1));
-
-	int at = vip.rows;
-	vip.row[at].size = len;
-	vip.row[at].chars = malloc(len + 1);
-	memcpy(vip.row[at].chars, s, len);
-	vip.row[at].chars[len] = '\0';
-
-	vip.row[at].render_size = 0;
-	vip.row[at].render = NULL;
-	update_row(&vip.row[at]);
-
-	vip.rows++;
-	vip.dirty++;
-}
-
-void row_insert_char(row *row, int at, int c)
-{
-	if (at < 0 || at > row->size) {
-		at = row->size;
-	}
-	row->chars = realloc(row->chars, row->size + 2);
-	memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
-	row->size++;
-	row->chars[at] = c;
-	update_row(row);
-	vip.dirty++;
-}
-
-char *rows_to_str(int *buflen)
-{
-	int total_len = 0;
-	for (int j = 0; j < vip.rows; j++) {
-		total_len += vip.row[j].size + 1;
-	}
-	*buflen = total_len;
-	char *buf = malloc(total_len);
-	char *p = buf;
-	for (int j = 0; j < vip.rows; j++) {
-		memcpy(p, vip.row[j].chars, vip.row[j].size);
-		p += vip.row[j].size;
-		*p = '\n';
-		p++;
-	}
-	return buf;
-}
-
 void open_editor(char *filename)
 {
 	free(vip.filename);
@@ -190,7 +107,7 @@ void open_editor(char *filename)
 		while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
 			len--;
 		}
-		append_row(line, len);
+		insert_row(vip.rows, line, len);
 	}
 	free(line);
 	fclose(fp);
@@ -345,11 +262,12 @@ void move_cursor(int key)
 
 void process_key()
 {
-	static int quit_times = QUIT_CONFIRM
+	static int quit_times = QUIT_CONFIRM;
+
 	int c = read_key();
 	switch (c) {
 		case '\r':
-			/* TBC */
+			insert_new_line();
 			break;
 
 		case CTRL_KEY('q'):
@@ -380,7 +298,9 @@ void process_key()
 		case BACKSPACE:
 		case CTRL_KEY('h'):
 		case DEL_KEY:
-			/* TBC */
+			if (c == DEL_KEY)
+				move_cursor(ARROW_RIGHT);
+			del_char();
 			break;
 
 		case PAGE_UP:
@@ -426,6 +346,7 @@ void init_editor()
 	vip.rows = 0;
 	vip.row = NULL;
 	vip.dirty = 0;
+	vip.mode = NORMAL;
 	vip.filename = NULL;
 	vip.statusmsg[0] = '\0';
 	vip.statusmsg_time = 0;
