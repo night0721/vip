@@ -174,10 +174,7 @@ void draw_rows(struct abuf *ab)
 				} else {
 					size_t len;
 					char *color = syntax_to_color(hl[j], &len);
-					FILE *f = fopen("/home/night/a", "a");
-					fprintf(f, "len: %d\n", len);
 					if (strncmp(current_color, color, len)) {
-						fprintf(f, "color: %s\n", color);
 						memcpy(current_color, color, len);
 						abAppend(ab, color, len);
 					}
