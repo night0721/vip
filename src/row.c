@@ -18,6 +18,21 @@ int row_cx_to_rx(row *row, int cx)
 	return rx;
 }
 
+int row_rx_to_cx(row *row, int rx)
+{
+  int cur_rx = 0;
+  int cx;
+  for (cx = 0; cx < row->size; cx++) {
+	  if (row->chars[cx] == '\t') {
+		  cur_rx += (TAB_SIZE - 1) - (cur_rx % TAB_SIZE);
+	  }
+    cur_rx++;
+    if (cur_rx > rx)
+		return cx;
+  }
+  return cx;
+}
+
 void update_row(row *row)
 {
 	int tabs = 0;

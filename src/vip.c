@@ -15,21 +15,6 @@
 #include "editor.h"
 #include "row.h"
 
-#define CTRL_KEY(k) ((k) & 0x1f)
-
-enum editorKey {
-	BACKSPACE = 127,
-	ARROW_LEFT = 1000,
-	ARROW_RIGHT,
-	ARROW_UP,
-	ARROW_DOWN,
-	DEL_KEY,
-	HOME_KEY,
-	END_KEY,
-	PAGE_UP,
-	PAGE_DOWN
-};
-
 editor vip;
 
 int read_key()
@@ -87,34 +72,10 @@ int read_key()
 	}
 }
 
-void open_editor(char *filename)
-{
-	free(vip.filename);
-	vip.filename = strdup(filename);
-	FILE *fp = fopen(filename, "r");
-	if (!fp) {
-		die("fopen");
-	}
-	char *line = NULL;
-	size_t linecap = 0;
-	ssize_t len;
-	while ((len = getline(&line, &linecap, fp)) != -1) {
-		/* remove new line and carriage return at end of line */
-		while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
-			len--;
-		}
-		insert_row(vip.rows, line, len);
-	}
-	free(line);
-	fclose(fp);
-	/* reset dirtiness as nothing is modified yet */
-	vip.dirty = 0;
-}
-
 void save_file()
 {
 	if (vip.filename == NULL) {
-		vip.filename = prompt_editor("Save as: %s (ESC to cancel)");
+		vip.filename = prompt_editor("Save as: %s", NULL);
 		if (vip.filename == NULL) {
 			set_status_bar_message("Save aborted");
 			return;
@@ -230,40 +191,6 @@ void refresh_screen()
 	abFree(&ab);
 }
 
-char *prompt_editor(char *prompt)
-{
-	size_t bufsize = 128;
-	char *buf = malloc(bufsize);
-	size_t buflen = 0;
-	buf[0] = '\0';
-	while (1) {
-		set_status_bar_message(prompt, buf);
-		refresh_screen();
-		int c = read_key();
-		if (c == DEL_KEY || c == CTRL_KEY('h') || c == BACKSPACE) {
-			if (buflen != 0) {
-				buf[--buflen] = '\0';
-			}
-		} else if (c == '\x1b') {
-			set_status_bar_message("");
-			free(buf);
-			return NULL;
-		} else if (c == '\r') {
-			if (buflen != 0) {
-				set_status_bar_message("");
-				return buf;
-			}
-		} else if (!iscntrl(c) && c < 128) {
-			if (buflen == bufsize - 1) {
-				bufsize *= 2;
-				buf = realloc(buf, bufsize);
-			}
-			buf[buflen++] = c;
-			buf[buflen] = '\0';
-		}
-	}
-}
-
 void move_cursor(int key)
 {
 	row *row = (vip.cy >= vip.rows) ? NULL : &vip.row[vip.cy];
@@ -365,7 +292,10 @@ void process_key()
 
 		case ':': /* PASSTHROUGH */
 			if (vip.mode == NORMAL) {
-				char *cmd = prompt_editor(":%s");
+				char *cmd = prompt_editor(":%s", NULL);
+				if (cmd == NULL) {
+					return;
+				}
 				switch (cmd[0]) {
 					case 'q':
 						if (cmd[1] == '!') {
@@ -387,6 +317,11 @@ void process_key()
 					case 'w':
 						save_file();
 				}
+			}
+		case '/': /* PASSTHROUGH */
+			if (vip.mode == NORMAL) {
+				find_editor();
+				break;
 			}
 
 		case 'k': /* PASSTHROUGH */
@@ -457,7 +392,7 @@ int main(int argc, char **argv)
 		open_editor(argv[1]);
 	}
 
-	set_status_bar_message(":w - Save, :q - Quit");
+	set_status_bar_message("By night0721 and gnucolas");
 
 	while (1) {
 		refresh_screen();

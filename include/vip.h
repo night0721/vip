@@ -23,10 +23,24 @@
 #define GREEN_FG "\x1b[48;2;166;227;161m"
 #define GREEN_BG "\x1b[38;2;166;227;161m"
 
-
 #define NORMAL 0
 #define INSERT 1
 #define VISUAL 2
+
+#define CTRL_KEY(k) ((k) & 0x1f)
+
+enum keys {
+	BACKSPACE = 127,
+	ARROW_LEFT = 1000,
+	ARROW_RIGHT,
+	ARROW_UP,
+	ARROW_DOWN,
+	DEL_KEY,
+	HOME_KEY,
+	END_KEY,
+	PAGE_UP,
+	PAGE_DOWN
+};
 
 typedef struct row {
 	int size;
@@ -60,10 +74,11 @@ struct abuf {
 
 void abAppend(struct abuf *ab, const char *s, int len);
 
+int read_key();
+void refresh_screen();
 void append_row(char *s, size_t len);
 void row_insert_char(row *row, int at, int c);
 void row_del_char(row *row, int at);
-char *prompt_editor(char *prompt);
 
 extern editor vip;
 

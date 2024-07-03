@@ -2,6 +2,7 @@
 #define ROW_H_
 
 int row_cx_to_rx(row *row, int cx);
+int row_rx_to_cx(row *row, int rx);
 void update_row(row *row);
 void insert_row(int at, char *s, size_t len);
 void free_row(row *row);
