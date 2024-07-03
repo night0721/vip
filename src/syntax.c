@@ -26,14 +26,12 @@ char *syntax_to_color(int hl, size_t *len)
 		case HL_MATCH:;
 			char *str = malloc(COLOR_LEN * 2 + 1);
 			snprintf(str, COLOR_LEN * 2 + 1, "%s%s", BLACK_BG, SKY_FG);
-			str[COLOR_LEN * 2] = '\0';
 			*len = COLOR_LEN * 2;
 			return str;
 
 		case HL_RESET:;
 			char *res = malloc(COLOR_LEN * 2 + 1);
 			snprintf(res, COLOR_LEN * 2 + 1, "%s%s", WHITE_BG, BLACK_FG);
-			res[COLOR_LEN * 2] = '\0';
 			*len = COLOR_LEN * 2;
 			return res;
 

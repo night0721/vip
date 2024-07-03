@@ -178,7 +178,6 @@ void draw_rows(struct abuf *ab)
 						memcpy(current_color, color, len);
 						abAppend(ab, color, len);
 					}
-					fclose(f);
 					free(color);
 					abAppend(ab, &c[j], 1);
 				}
