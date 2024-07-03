@@ -156,6 +156,9 @@ void find_callback(char *query, int key)
 			vip.cy = current;
 			vip.cx = row_rx_to_cx(row, match - row->render);
 			vip.rowoff = vip.rows;
+
+			memset(&row->hl[match - row->render], HL_MATCH, strlen(query));
+			memset(&row->hl[match - row->render + strlen(query)], HL_RESET, row->render_size - (match - row->render + strlen(query)));
 			break;
 		}
 	}

@@ -14,18 +14,22 @@
 
 /* THEME */
 /* 38 and 48 is reversed as bar's color is reversed */
-#define SURFACE_1_BG "\x1b[38;2;49;50;68m"
-#define BLACK_FG "\x1b[48;2;0;0;0m"
-#define BLACK_BG "\x1b[38;2;0;0;0m"
-#define WHITE_FG "\x1b[48;2;205;214;244m"
-#define BLUE_FG "\x1b[48;2;137;180;250m"
-#define BLUE_BG "\x1b[38;2;137;180;250m"
-#define GREEN_FG "\x1b[48;2;166;227;161m"
-#define GREEN_BG "\x1b[38;2;166;227;161m"
 
-#define NORMAL 0
-#define INSERT 1
-#define VISUAL 2
+#define COLOR_LEN 19
+
+#define SURFACE_1_BG "\x1b[38;2;049;050;068m"
+#define BLACK_FG     "\x1b[48;2;000;000;000m"
+#define BLACK_BG     "\x1b[38;2;000;000;000m"
+#define WHITE_FG     "\x1b[48;2;205;214;244m"
+#define WHITE_BG     "\x1b[38;2;205;214;244m"
+#define BLUE_FG	     "\x1b[48;2;137;180;250m"
+#define BLUE_BG      "\x1b[38;2;137;180;250m"
+#define GREEN_FG     "\x1b[48;2;166;227;161m"
+#define GREEN_BG     "\x1b[38;2;166;227;161m"
+#define PEACH_FG     "\x1b[48;2;250;179;135m"
+#define PEACH_BG     "\x1b[38;2;250;179;135m"
+#define SKY_FG       "\x1b[48;2;137;220;235m"
+#define SKY_BG       "\x1b[38;2;137;220;235m"
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
@@ -42,16 +46,31 @@ enum keys {
 	PAGE_DOWN
 };
 
+enum modes {
+	NORMAL,
+	INSERT,
+	VISUAL,
+	COMMAND
+};
+
+enum highlight {
+	HL_NORMAL = 0,
+	HL_NUMBER,
+	HL_MATCH,
+	HL_RESET
+};
+
 typedef struct row {
 	int size;
 	int render_size;
 	char *chars;
 	char *render;
+	unsigned char *hl;
 } row;
 
 typedef struct editor {
 	int cx, cy; /* chars x, y */
-	int rx; /* render x, y */
+	int rx; /* render x */
 	int rowoff;
 	int coloff;
 	int screenrows, screencols;

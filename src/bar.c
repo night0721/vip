@@ -14,15 +14,20 @@ void draw_status_bar(struct abuf *ab)
 
 	int mode_len;
 	if (vip.mode == NORMAL) {
-		abAppend(ab, BLUE_BG, 19);
+		abAppend(ab, BLUE_BG, COLOR_LEN);
 		char mode[9] = " NORMAL ";
 		abAppend(ab, mode, 8);
 		mode_len = 8;
-	} else {
-		abAppend(ab, GREEN_BG, 19);
+	} else if (vip.mode == INSERT) {
+		abAppend(ab, GREEN_BG, COLOR_LEN);
 		char mode[9] = " INSERT ";
 		abAppend(ab, mode, 8);
 		mode_len = 8;
+	} else if (vip.mode == COMMAND) {
+		abAppend(ab, PEACH_BG, COLOR_LEN);
+		char mode[10] = " COMMAND ";
+		abAppend(ab, mode, 9);
+		mode_len = 9;
 	}
 
 	abAppend(ab, "\x1b[22m", 5);
@@ -40,36 +45,42 @@ void draw_status_bar(struct abuf *ab)
 	}
 	int coord_len = snprintf(coord, sizeof(coord), " %d:%d ", vip.cy + 1, vip.rx + 1);
 
-	abAppend(ab, SURFACE_1_BG, 16); /* background */
+	abAppend(ab, SURFACE_1_BG, COLOR_LEN); /* background */
 	if (vip.mode == NORMAL) {
-		abAppend(ab, BLUE_FG, 19); /* text */
-	} else {
-		abAppend(ab, GREEN_FG, 19);
+		abAppend(ab, BLUE_FG, COLOR_LEN); /* text */
+	} else if (vip.mode == INSERT) {
+		abAppend(ab, GREEN_FG, COLOR_LEN);
+	} else if (vip.mode == COMMAND) {
+		abAppend(ab, PEACH_FG, COLOR_LEN);
 	}
 	abAppend(ab, git_branch, gitb_len);
 	abAppend(ab, "|", 1);
-	abAppend(ab, GREEN_FG, 19);
+	abAppend(ab, GREEN_FG, COLOR_LEN);
 	abAppend(ab, git_diff, gitd_len);
-	abAppend(ab, BLACK_BG, 13);
-	abAppend(ab, WHITE_FG, 19);
+	abAppend(ab, BLACK_BG, COLOR_LEN);
+	abAppend(ab, WHITE_FG, COLOR_LEN);
 	abAppend(ab, file, file_len);
 
 
 	while (file_len < vip.screencols) {
 		if (vip.screencols - mode_len - file_len - gitb_len - gitd_len - 1 == lines_len + coord_len) {
-			abAppend(ab, SURFACE_1_BG, 16);
+			abAppend(ab, SURFACE_1_BG, COLOR_LEN);
 			if (vip.mode == NORMAL) {
-				abAppend(ab, BLUE_FG, 19);
-			} else {
-				abAppend(ab, GREEN_FG, 19);
+				abAppend(ab, BLUE_FG, COLOR_LEN);
+			} else if (vip.mode == INSERT) {
+				abAppend(ab, GREEN_FG, COLOR_LEN);
+			} else if (vip.mode == COMMAND) {
+				abAppend(ab, PEACH_FG, COLOR_LEN);
 			}
 			abAppend(ab, lines, lines_len);
 			if (vip.mode == NORMAL) {
-				abAppend(ab, BLUE_BG, 19);
-			} else {
-				abAppend(ab, GREEN_BG, 19);
+				abAppend(ab, BLUE_BG, COLOR_LEN);
+			} else if (vip.mode == INSERT) {
+				abAppend(ab, GREEN_BG, COLOR_LEN);
+			} else if (vip.mode == COMMAND) {
+				abAppend(ab, PEACH_BG, COLOR_LEN);
 			}
-			abAppend(ab, BLACK_FG, 13);
+			abAppend(ab, BLACK_FG, COLOR_LEN);
 			abAppend(ab, "\x1b[1m", 4);
 			abAppend(ab, coord, coord_len);
 			abAppend(ab, "\x1b[22m", 5);

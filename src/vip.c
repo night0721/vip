@@ -14,6 +14,7 @@
 #include "bar.h"
 #include "editor.h"
 #include "row.h"
+#include "syntax.h"
 
 editor vip;
 
@@ -159,7 +160,33 @@ void draw_rows(struct abuf *ab)
 			int len = vip.row[filerow].render_size - vip.coloff;
 			if (len < 0) len = 0;
 			if (len > vip.screencols) len = vip.screencols;
-			abAppend(ab, &vip.row[filerow].render[vip.coloff], len);
+			char *c = &vip.row[filerow].render[vip.coloff];
+			unsigned char *hl = &vip.row[filerow].hl[vip.coloff];
+
+			char *current_color = malloc(COLOR_LEN * 2);
+			for (int j = 0; j < len; j++) {
+				if (hl[j] == HL_NORMAL) {
+					if (strncmp(current_color, WHITE_BG, COLOR_LEN)) {
+						abAppend(ab, WHITE_BG, COLOR_LEN);
+						memcpy(current_color, WHITE_BG, COLOR_LEN);
+					}
+					abAppend(ab, &c[j], 1);
+				} else {
+					size_t len;
+					char *color = syntax_to_color(hl[j], &len);
+					FILE *f = fopen("/home/night/a", "a");
+					fprintf(f, "len: %d\n", len);
+					if (strncmp(current_color, color, len)) {
+						fprintf(f, "color: %s\n", color);
+						memcpy(current_color, color, len);
+						abAppend(ab, color, len);
+					}
+					fclose(f);
+					free(color);
+					abAppend(ab, &c[j], 1);
+				}
+			}
+			abAppend(ab, WHITE_BG, COLOR_LEN);
 		}
 
 		abAppend(ab, "\x1b[K", 3);
@@ -292,8 +319,10 @@ void process_key()
 
 		case ':': /* PASSTHROUGH */
 			if (vip.mode == NORMAL) {
+				vip.mode = COMMAND;
 				char *cmd = prompt_editor(":%s", NULL);
 				if (cmd == NULL) {
+					vip.mode = NORMAL;
 					return;
 				}
 				switch (cmd[0]) {
@@ -306,6 +335,7 @@ void process_key()
 						} else {
 							if (vip.dirty) {
 								set_status_bar_message("No write since last change for buffer \"%s\"", vip.filename);
+								vip.mode = NORMAL;
 								return;
 							}
 							write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -316,6 +346,7 @@ void process_key()
 						}
 					case 'w':
 						save_file();
+						vip.mode = NORMAL;
 				}
 			}
 		case '/': /* PASSTHROUGH */

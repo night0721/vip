@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "vip.h"
+#include "syntax.h"
 
 extern editor vip;
 
@@ -54,6 +55,7 @@ void update_row(row *row)
 	}
 	row->render[idx] = '\0';
 	row->render_size = idx;
+	update_highlight(row);
 }
 
 void insert_row(int at, char *s, size_t len)
@@ -70,6 +72,7 @@ void insert_row(int at, char *s, size_t len)
 
 	vip.row[at].render_size = 0;
 	vip.row[at].render = NULL;
+	vip.row[at].hl = NULL;
 	update_row(&vip.row[at]);
 
 	vip.rows++;
@@ -80,6 +83,7 @@ void free_row(row *row)
 {
 	free(row->render);
 	free(row->chars);
+	free(row->hl);
 }
 
 void del_row(int at)
