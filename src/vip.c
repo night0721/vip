@@ -117,7 +117,13 @@ void open_editor(char *filename)
 
 void save_file()
 {
-	if (vip.filename == NULL) return;
+	if (vip.filename == NULL) {
+		vip.filename = prompt_editor("Save as: %s (ESC to cancel)");
+		if (vip.filename == NULL) {
+			set_status_bar_message("Save aborted");
+			return;
+		}
+	}
 	int len;
 	char *buf = rows_to_str(&len);
 	int fd = open(vip.filename, O_RDWR | O_CREAT, 0644);
@@ -226,6 +232,40 @@ void refresh_screen()
 
 	write(STDOUT_FILENO, ab.b, ab.len);
 	abFree(&ab);
+}
+
+char *prompt_editor(char *prompt)
+{
+	size_t bufsize = 128;
+	char *buf = malloc(bufsize);
+	size_t buflen = 0;
+	buf[0] = '\0';
+	while (1) {
+		set_status_bar_message(prompt, buf);
+		refresh_screen();
+		int c = read_key();
+		if (c == DEL_KEY || c == CTRL_KEY('h') || c == BACKSPACE) {
+			if (buflen != 0) {
+				buf[--buflen] = '\0';
+			}
+		} else if (c == '\x1b') {
+			set_status_bar_message("");
+			free(buf);
+			return NULL;
+		} else if (c == '\r') {
+			if (buflen != 0) {
+				set_status_bar_message("");
+				return buf;
+			}
+		} else if (!iscntrl(c) && c < 128) {
+			if (buflen == bufsize - 1) {
+				bufsize *= 2;
+				buf = realloc(buf, bufsize);
+			}
+			buf[buflen++] = c;
+			buf[buflen] = '\0';
+		}
+	}
 }
 
 void move_cursor(int key)

@@ -62,6 +62,7 @@ void abAppend(struct abuf *ab, const char *s, int len);
 void append_row(char *s, size_t len);
 void row_insert_char(row *row, int at, int c);
 void row_del_char(row *row, int at);
+char *prompt_editor(char *prompt);
 
 extern editor vip;
 
