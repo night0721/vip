@@ -41,10 +41,6 @@ int read_key()
 			die("read");
 		}
 	}
-	if (c == 'k') return ARROW_UP;
-	if (c == 'j') return ARROW_DOWN;
-	if (c == 'l') return ARROW_RIGHT;
-	if (c == 'h') return ARROW_LEFT;
 
 	if (c == '\x1b') {
 		char seq[3];
@@ -302,27 +298,11 @@ void move_cursor(int key)
 
 void process_key()
 {
-	static int quit_times = QUIT_CONFIRM;
 
 	int c = read_key();
 	switch (c) {
 		case '\r':
 			insert_new_line();
-			break;
-
-		case CTRL_KEY('q'):
-			if (vip.dirty && quit_times > 0) {
-				set_status_bar_message("No write since last change for buffer \"%s\"", vip.filename);
-				quit_times--;
-				return;
-			}
-			write(STDOUT_FILENO, "\x1b[2J", 4);
-			write(STDOUT_FILENO, "\x1b[H", 3);
-			exit(0);
-			break;
-
-		case CTRL_KEY('s'):
-			save_file();
 			break;
 
 		case HOME_KEY:
@@ -337,10 +317,12 @@ void process_key()
 
 		case BACKSPACE:
 		case CTRL_KEY('h'):
-		case DEL_KEY:
-			if (c == DEL_KEY)
-				move_cursor(ARROW_RIGHT);
-			del_char();
+		case DEL_KEY: /* PASSTHROUGH */
+			if (vip.mode == INSERT) {
+				if (c == DEL_KEY)
+					move_cursor(ARROW_RIGHT);
+				del_char();
+			}
 			break;
 
 		case PAGE_UP:
@@ -362,18 +344,88 @@ void process_key()
 		case ARROW_DOWN:
 		case ARROW_LEFT:
 		case ARROW_RIGHT:
-			move_cursor(c);
+			if (vip.mode == INSERT) {
+				move_cursor(c);
+			}
 			break;
 
 		case CTRL_KEY('l'):
 		case '\x1b':
+			if (vip.mode == INSERT) {
+				vip.mode = NORMAL;
+				move_cursor(ARROW_LEFT);
+			}
 			break;
 
+		case 'i':
+			if (vip.mode == NORMAL) {
+				vip.mode = INSERT;
+			}
+			break;
+
+		case ':': /* PASSTHROUGH */
+			if (vip.mode == NORMAL) {
+				char *cmd = prompt_editor(":%s");
+				switch (cmd[0]) {
+					case 'q':
+						if (cmd[1] == '!') {
+							write(STDOUT_FILENO, "\x1b[2J", 4);
+							write(STDOUT_FILENO, "\x1b[H", 3);
+							exit(0);
+							break;
+						} else {
+							if (vip.dirty) {
+								set_status_bar_message("No write since last change for buffer \"%s\"", vip.filename);
+								return;
+							}
+							write(STDOUT_FILENO, "\x1b[2J", 4);
+							write(STDOUT_FILENO, "\x1b[H", 3);
+							exit(0);
+							break;
+
+						}
+					case 'w':
+						save_file();
+				}
+			}
+
+		case 'k': /* PASSTHROUGH */
+			if (vip.mode != INSERT) {
+				move_cursor(ARROW_UP);
+				break;
+			}
+
+		case 'j': /* PASSTHROUGH */
+			if (vip.mode != INSERT) {
+				move_cursor(ARROW_DOWN);
+				break;
+			}
+
+		case 'l': /* PASSTHROUGH */
+			if (vip.mode != INSERT) {
+				move_cursor(ARROW_RIGHT);
+				break;
+			}
+
+		case 'h': /* PASSTHROUGH */
+			if (vip.mode != INSERT) {
+				move_cursor(ARROW_LEFT);
+				break;
+			}
+
+		case 'o': /* PASSTHROUGH */
+			if (vip.mode == NORMAL) {
+				shift_new_line();
+				vip.mode = INSERT;
+				break;
+			}
+
 		default:
-			insert_char(c);
+			if (vip.mode == INSERT) {
+				insert_char(c);
+			}
 			break;
 	}
-	quit_times = QUIT_CONFIRM;
 }
 
 void init_editor()
@@ -405,7 +457,7 @@ int main(int argc, char **argv)
 		open_editor(argv[1]);
 	}
 
-	set_status_bar_message("Ctrl-S: Save, Ctrl-Q:Quit");
+	set_status_bar_message(":w - Save, :q - Quit");
 
 	while (1) {
 		refresh_screen();

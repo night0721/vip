@@ -28,6 +28,16 @@ void insert_new_line()
 	vip.cx = 0;
 }
 
+/*
+ * 'o' in vim
+ */
+void shift_new_line()
+{
+	insert_row(vip.cy + 1, "", 0);
+	vip.cy++;
+	vip.cx = 0;
+}
+
 void del_char()
 {
 	if (vip.cy == vip.rows) return;
