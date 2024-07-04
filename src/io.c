@@ -230,6 +230,18 @@ void process_key()
 				break;
 			}
 
+		case '0': /* PASSTHROUGH */
+			if (vip.mode == NORMAL) {
+				vip.cx = 0;
+				break;
+			}
+		
+		case '$': /* PASSTHROUGH */
+			if (vip.mode == NORMAL) {
+				vip.cx = vip.row[vip.cy].size;
+				break;
+			}
+
 		default:
 			if (vip.mode == INSERT) {
 				insert_char(c);
