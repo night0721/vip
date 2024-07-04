@@ -1,6 +1,16 @@
 #ifndef ROW_H_
 #define ROW_H_
 
+typedef struct row {
+	int idx;
+	int size;
+	int render_size;
+	char *chars;
+	char *render;
+	unsigned char *hl;
+	int opened_comment;
+} row;
+
 int row_cx_to_rx(row *row, int cx);
 int row_rx_to_cx(row *row, int rx);
 void update_row(row *row);

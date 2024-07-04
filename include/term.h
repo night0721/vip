@@ -1,6 +1,8 @@
 #ifndef TERM_H_
 #define TERM_H_
 
+#define CTRL_KEY(k) ((k) & 0x1f)
+
 void die(const char *s);
 void reset_term();
 void setup_term();
