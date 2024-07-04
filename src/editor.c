@@ -1,14 +1,92 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <ctype.h>
 
+#include "editor.h"
 #include "vip.h"
-#include "bar.h"
-#include "row.h"
 #include "term.h"
+#include "io.h"
+#include "bar.h"
 
 extern editor vip;
+
+void refresh_screen()
+{
+	scroll();
+
+	struct abuf ab = ABUF_INIT;
+
+	abAppend(&ab, "\x1b[?25l", 6);
+	abAppend(&ab, "\x1b[H", 3);
+
+	draw_rows(&ab);
+	draw_status_bar(&ab);
+	draw_message_bar(&ab);
+
+	char buf[32];
+	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (vip.cy - vip.rowoff) + 1,
+			(vip.rx - vip.coloff) + 1);
+	abAppend(&ab, buf, strlen(buf));
+
+	abAppend(&ab, "\x1b[?25h", 6);
+
+	write(STDOUT_FILENO, ab.b, ab.len);
+	abFree(&ab);
+}
+
+void move_cursor(int key)
+{
+	row *row = (vip.cy >= vip.rows) ? NULL : &vip.row[vip.cy];
+	switch (key) {
+		case ARROW_LEFT:
+			if (vip.cx != 0) {
+				vip.cx--;
+			}
+			break;
+		case ARROW_RIGHT:
+			if (row && vip.cx < row->size) {
+				vip.cx++;
+			}
+			break;
+		case ARROW_UP:
+			if (vip.cy != 0) {
+				vip.cy--;
+			}
+			break;
+		case ARROW_DOWN:
+			if (vip.cy < vip.rows) {
+				vip.cy++;
+			}
+			break;
+	}
+	row = (vip.cy >= vip.rows) ? NULL : &vip.row[vip.cy];
+	int rowlen = row ? row->size : 0;
+	if (vip.cx > rowlen) {
+		vip.cx = rowlen;
+	}
+}
+
+void scroll()
+{
+	vip.rx = 0;
+	if (vip.cy < vip.rows) {
+		vip.rx = row_cx_to_rx(&vip.row[vip.cy], vip.cx);
+	}
+	if (vip.cy < vip.rowoff) {
+		vip.rowoff = vip.cy;
+	}
+	if (vip.cy >= vip.rowoff + vip.screenrows) {
+		vip.rowoff = vip.cy - vip.screenrows + 1;
+	}
+	if (vip.rx < vip.coloff) {
+		vip.coloff = vip.rx;
+	}
+	if (vip.rx >= vip.coloff + vip.screencols) {
+		vip.coloff = vip.rx - vip.screencols + 1;
+	}
+}
 
 void insert_char(int c)
 {
@@ -62,10 +140,35 @@ void del_char()
 	}
 }
 
+void init_editor()
+{
+	vip.cx = 0;
+	vip.cy = 0;
+	vip.rx = 0;
+	vip.rowoff = 0;
+	vip.coloff = 0;
+	vip.rows = 0;
+	vip.row = NULL;
+	vip.dirty = 0;
+	vip.mode = NORMAL;
+	vip.filename = NULL;
+	vip.statusmsg[0] = '\0';
+	vip.statusmsg_time = 0;
+	vip.syntax = NULL;
+
+	if (get_window_size(&vip.screenrows, &vip.screencols) == -1) {
+		die("get_window_size");
+	}
+	vip.screenrows -= 2;
+}
+
 void open_editor(char *filename)
 {
 	free(vip.filename);
 	vip.filename = strdup(filename);
+
+	select_syntax_highlight();
+
 	FILE *fp = fopen(filename, "r");
 	if (!fp) {
 		die("fopen");
@@ -170,8 +273,8 @@ void find_callback(char *query, int key)
 			saved_hl = malloc(row->render_size);
 			memcpy(saved_hl, row->hl, row->render_size);
 
-			memset(&row->hl[match - row->render], HL_MATCH, strlen(query));
-			memset(&row->hl[match - row->render + strlen(query)], HL_RESET, row->render_size - (match - row->render + strlen(query)));
+			memset(&row->hl[match - row->render], MATCH, strlen(query));
+			memset(&row->hl[match - row->render + strlen(query)], RESET, row->render_size - (match - row->render + strlen(query)));
 			break;
 		}
 	}
