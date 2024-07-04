@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "vip.h"
+#include "row.h"
 #include "syntax.h"
 
 extern editor vip;
@@ -64,6 +65,11 @@ void insert_row(int at, char *s, size_t len)
 
 	vip.row = realloc(vip.row, sizeof(row) * (vip.rows + 1));
 	memmove(&vip.row[at + 1], &vip.row[at], sizeof(row) * (vip.rows - at));
+	for (int j = at + 1; j <= vip.rows; j++) {
+		vip.row[j].idx++;
+	}
+
+	vip.row[at].idx = at;
 
 	vip.row[at].size = len;
 	vip.row[at].chars = malloc(len + 1);
@@ -73,6 +79,7 @@ void insert_row(int at, char *s, size_t len)
 	vip.row[at].render_size = 0;
 	vip.row[at].render = NULL;
 	vip.row[at].hl = NULL;
+	vip.row[at].opened_comment = 0;
 	update_row(&vip.row[at]);
 
 	vip.rows++;
@@ -91,6 +98,9 @@ void del_row(int at)
 	if (at < 0 || at >= vip.rows) return;
 	free_row(&vip.row[at]);
 	memmove(&vip.row[at], &vip.row[at + 1], sizeof(row) * (vip.rows - at - 1));
+	for (int j = at; j < vip.rows - 1; j++) {
+		vip.row[j].idx--;
+	}
 	vip.rows--;
 	vip.dirty++;
 }

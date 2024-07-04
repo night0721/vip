@@ -32,11 +32,12 @@ void draw_status_bar(struct abuf *ab)
 
 	abAppend(ab, "\x1b[22m", 5);
 
-	char git_branch[80], git_diff[80], file[80], lines[80], coord[80];
+	char git_branch[80], git_diff[80], file[80], info[80], lines[80], coord[80];
 	int gitb_len = snprintf(git_branch, sizeof(git_branch), " %s ", "master");
 	int gitd_len = snprintf(git_diff, sizeof(git_diff), " %s ", "+1");
 	int file_len = snprintf(file, sizeof(file), " %.20s %s",
 			vip.filename ? vip.filename : "[No Name]", vip.dirty ? "[+]" : "");
+	int info_len = snprintf(info, sizeof(info), " %s ", vip.syntax ? vip.syntax->filetype : "");
 	int lines_len;
 	if (vip.rows == 0 || vip.rows == vip.cy + 1) {
 		lines_len = snprintf(lines, sizeof(lines), " %s ", vip.rows == 0 ? "Top" : "Bot");
@@ -63,7 +64,8 @@ void draw_status_bar(struct abuf *ab)
 
 
 	while (file_len < vip.screencols) {
-		if (vip.screencols - mode_len - file_len - gitb_len - gitd_len - 1 == lines_len + coord_len) {
+		if (vip.screencols - mode_len - file_len - gitb_len - gitd_len - 1 == info_len + lines_len + coord_len) {
+			abAppend(ab, info, info_len);
 			abAppend(ab, SURFACE_1_BG, COLOR_LEN);
 			if (vip.mode == NORMAL) {
 				abAppend(ab, BLUE_FG, COLOR_LEN);
