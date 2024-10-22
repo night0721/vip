@@ -6,10 +6,8 @@ VERSION = 1.0
 TARGET = vip
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
-MANDIR = $(PREFIX)/share/man/man1
 
-# Flags
-CFLAGS = -O3 -march=native -mtune=native -pipe -s -flto -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
+CFLAGS = -O3 -march=native -mtune=native -pipe -s -flto -std=c99 -pedantic -Wall
 
 SRC = src/*.c config.h
 INCLUDE = include
@@ -26,15 +24,14 @@ dist:
 
 install: $(TARGET)
 	mkdir -p $(DESTDIR)$(BINDIR)
-	mkdir -p $(DESTDIR)$(MANDIR)
 	cp -p $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
 	chmod 755 $(DESTDIR)$(BINDIR)/$(TARGET)
 
 uninstall:
-	$(RM) $(DESTDIR)$(BINDIR)/$(TARGET)
+	rm $(DESTDIR)$(BINDIR)/$(TARGET)
 
 clean:
-	$(RM) $(TARGET)
+	rm $(TARGET)
 
 all: $(TARGET)
 
