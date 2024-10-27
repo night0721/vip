@@ -168,20 +168,20 @@ char *syntax_to_color(int hl, size_t *len)
 			return strdup(YELLOW_BG);
 
 		case MATCH:;
-				   char *str = malloc(COLOR_LEN * 2 + 1);
-				   snprintf(str, COLOR_LEN * 2 + 1, "%s%s", BLACK_BG, SKY_FG);
-				   *len = COLOR_LEN * 2;
-				   return str;
+			char *str = malloc(COLOR_LEN * 2 + 1);
+			snprintf(str, COLOR_LEN * 2 + 1, "%s%s", BLACK_BG, SKY_FG);
+			*len = COLOR_LEN * 2;
+			return str;
 
 		case RESET:;
-				   char *res = malloc(COLOR_LEN * 2 + 1);
-				   snprintf(res, COLOR_LEN * 2 + 1, "%s%s", WHITE_BG, BLACK_FG);
-				   *len = COLOR_LEN * 2;
-				   return res;
+			char *res = malloc(COLOR_LEN * 2 + 1);
+			snprintf(res, COLOR_LEN * 2 + 1, "%s%s", WHITE_BG, BLACK_FG);
+			*len = COLOR_LEN * 2;
+			return res;
 
 		default: 
-				   *len = COLOR_LEN;
-				   return strdup(WHITE_BG);
+			*len = COLOR_LEN;
+			return strdup(WHITE_BG);
 	}
 }
 
