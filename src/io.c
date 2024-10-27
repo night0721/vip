@@ -96,7 +96,6 @@ void save_file()
 
 void process_key()
 {
-
 	int c = read_key();
 	switch (c) {
 		case '\r':

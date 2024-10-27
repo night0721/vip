@@ -8,11 +8,11 @@ BINDIR = $(PREFIX)/bin
 
 CFLAGS = -O3 -march=native -mtune=native -pipe -s -flto -std=c99 -pedantic -Wall
 
-SRC = src/*.c config.h
+SRC != find src -name *.c
 INCLUDE = include
 
-$(TARGET): $(SRC)
-	$(CC) $(SRC) -o $@ $(CFLAGS) -I$(INCLUDE) -I.
+$(TARGET): $(SRC) config.h
+	$(CC) $(SRC) config.h -o $@ $(CFLAGS) -I$(INCLUDE) -I.
 
 dist:
 	mkdir -p $(TARGET)-$(VERSION)
