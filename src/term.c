@@ -10,8 +10,7 @@ extern editor vip;
 
 void die(const char *s)
 {
-	write(STDOUT_FILENO, "\x1b[2J", 4);
-	write(STDOUT_FILENO, "\x1b[H", 3);
+	write(STDOUT_FILENO, "\x1b[2J\x1b[H", 7);
 	perror(s);
 	exit(1);
 }
@@ -21,6 +20,7 @@ void reset_term()
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &vip.termios) == -1) {
 		die("tcsetattr");
 	}
+	write(STDOUT_FILENO, "\x1b[2J\x1b[?1049l", 12);
 }
 
 /*
@@ -28,6 +28,7 @@ void reset_term()
  */
 void setup_term()
 {
+	write(STDOUT_FILENO, "\x1b[?1049h\x1b[2J", 12);
 	if (tcgetattr(STDIN_FILENO, &vip.termios) == -1) {
 		die("tcgetattr");
 	}

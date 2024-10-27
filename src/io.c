@@ -171,8 +171,6 @@ void process_key()
 				switch (cmd[0]) {
 					case 'q':
 						if (cmd[1] == '!') {
-							write(STDOUT_FILENO, "\x1b[2J", 4);
-							write(STDOUT_FILENO, "\x1b[H", 3);
 							exit(0);
 							break;
 						} else {
@@ -181,8 +179,7 @@ void process_key()
 								vip.mode = NORMAL;
 								return;
 							}
-							write(STDOUT_FILENO, "\x1b[2J", 4);
-							write(STDOUT_FILENO, "\x1b[H", 3);
+
 							exit(0);
 							break;
 
