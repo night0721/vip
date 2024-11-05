@@ -6,13 +6,13 @@ TARGET = vip
 PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
 
-CFLAGS = -O3 -march=native -mtune=native -pipe -s -flto -std=c99 -pedantic -Wall
+CFLAGS = -Os -march=native -mtune=native -pipe -s -flto -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE
 
 SRC != find src -name *.c
 INCLUDE = include
 
 $(TARGET): $(SRC) config.h
-	$(CC) $(SRC) config.h -o $@ $(CFLAGS) -I$(INCLUDE) -I.
+	$(CC) $(SRC) -o $@ $(CFLAGS) -I$(INCLUDE) -I.
 
 dist:
 	mkdir -p $(TARGET)-$(VERSION)

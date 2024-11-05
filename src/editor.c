@@ -12,7 +12,7 @@
 
 extern editor vip;
 
-void refresh_screen()
+void refresh_screen(void)
 {
 	scroll();
 
@@ -68,7 +68,7 @@ void move_cursor(int key)
 	}
 }
 
-void scroll()
+void scroll(void)
 {
 	vip.rx = 0;
 	if (vip.cy < vip.rows) {
@@ -97,7 +97,7 @@ void insert_char(int c)
 	vip.cx++;
 }
 
-void insert_new_line()
+void insert_new_line(void)
 {
 	if (vip.cx == 0) {
 		insert_row(vip.cy, "", 0);
@@ -116,14 +116,14 @@ void insert_new_line()
 /*
  * 'o' in vim
  */
-void shift_new_line()
+void shift_new_line(void)
 {
 	insert_row(vip.cy + 1, "", 0);
 	vip.cy++;
 	vip.cx = 0;
 }
 
-void del_char()
+void del_char(void)
 {
 	if (vip.cy == vip.rows) return;
 	if (vip.cx == 0 && vip.cy == 0) return;
@@ -140,7 +140,7 @@ void del_char()
 	}
 }
 
-void init_editor()
+void init_editor(void)
 {
 	vip.cx = 0;
 	vip.cy = 0;
@@ -280,7 +280,7 @@ void find_callback(char *query, int key)
 	}
 }
 
-void find_editor()
+void find_editor(void)
 {
 	int tmp_cx = vip.cx;
 	int tmp_cy = vip.cy;

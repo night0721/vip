@@ -21,6 +21,6 @@ typedef struct language {
 int is_separator(int c);
 void update_highlight(row *row);
 char *syntax_to_color(int hl, size_t *len);
-void select_syntax_highlight();
+void select_syntax_highlight(void);
 
 #endif

@@ -10,7 +10,7 @@
 #include "vip.h"
 #include "bar.h"
 
-int read_key()
+int read_key(void)
 {
 	int nread;
 	char c;
@@ -65,7 +65,7 @@ int read_key()
 	}
 }
 
-void save_file()
+void save_file(void)
 {
 	if (vip.filename == NULL) {
 		vip.filename = prompt_editor("Save as: %s", NULL);
@@ -94,7 +94,7 @@ void save_file()
 	set_status_bar_message("Error saving: %s", strerror(errno));
 }
 
-void process_key()
+void process_key(void)
 {
 	int c = read_key();
 	switch (c) {

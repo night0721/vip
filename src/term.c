@@ -15,7 +15,7 @@ void die(const char *s)
 	exit(1);
 }
 
-void reset_term()
+void reset_term(void)
 {
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &vip.termios) == -1) {
 		die("tcsetattr");
@@ -26,7 +26,7 @@ void reset_term()
 /*
  * Setup terminal
  */
-void setup_term()
+void setup_term(void)
 {
 	write(STDOUT_FILENO, "\x1b[?1049h\x1b[2J", 12);
 	if (tcgetattr(STDIN_FILENO, &vip.termios) == -1) {

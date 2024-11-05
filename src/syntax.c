@@ -185,7 +185,7 @@ char *syntax_to_color(int hl, size_t *len)
 	}
 }
 
-void select_syntax_highlight()
+void select_syntax_highlight(void)
 {
 	vip.syntax = NULL;
 	if (vip.filename == NULL) return;
