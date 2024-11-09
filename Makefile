@@ -8,11 +8,10 @@ BINDIR = $(PREFIX)/bin
 
 CFLAGS = -Os -march=native -mtune=native -pipe -s -flto -std=c99 -pedantic -Wall -D_DEFAULT_SOURCE
 
-SRC != find src -name *.c
-INCLUDE = include
+SRC = vip.c
 
 $(TARGET): $(SRC) config.h
-	$(CC) $(SRC) -o $@ $(CFLAGS) -I$(INCLUDE) -I.
+	$(CC) $(SRC) -o $@ $(CFLAGS)
 
 dist:
 	mkdir -p $(TARGET)-$(VERSION)
