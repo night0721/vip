@@ -23,8 +23,6 @@
 #define MAUVE_BG     "\033[38;2;203;166;247m"
 #define YELLOW_BG    "\033[38;2;249;226;175m"
 
-
-
 enum keys {
 	BACKSPACE = 127,
 	ARROW_LEFT = 1000,
@@ -93,6 +91,9 @@ typedef struct {
 	language_t *syntax;
 } editor_t;
 
+#define HL_NUMBERS (1 << 0)
+#define HL_STRINGS (1 << 1)
+
 language_t langs[] = {
 	{
 		"c",
@@ -106,9 +107,6 @@ language_t langs[] = {
 };
 
 #define LANGS_LEN (sizeof(langs) / sizeof(langs[0]))
-
-#define HL_NUMBERS (1 << 0)
-#define HL_STRINGS (1 << 1)
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define COLOR_LEN 19

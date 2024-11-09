@@ -534,11 +534,11 @@ void save_file(void)
 		}
 		select_syntax();
 	}
-	int len;
 	int fd = open(cur_editor->filename, O_RDWR | O_CREAT, 0644);
 	if (fd != -1) {
+		int len;
+		char *buf = export_buffer(&len);
 		if (ftruncate(fd, len) != -1) {
-			char *buf = export_buffer(&len);
 			if (write(fd, buf, len) == len) {
 				close(fd);
 				free(buf);
@@ -576,7 +576,6 @@ void draw_rows(void)
 			unsigned char *hl = &cur_editor->row[filerow].hl[cur_editor->coloff];
 
 			char *current_color = malloc(COLOR_LEN * 2);
-			int current_color_len = 0;
 			for (int j = 0; j < len; j++) {
 				if (iscntrl(c[j])) {
 					bprintf("\033[7m^%c\033[m", '@' + c[j]);
