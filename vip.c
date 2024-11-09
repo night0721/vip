@@ -585,7 +585,6 @@ void draw_rows(void)
 				} else if (hl[j] == NORMAL) {
 					if (strncmp(current_color, WHITE_BG, COLOR_LEN)) {
 						memcpy(current_color, WHITE_BG, COLOR_LEN);
-						current_color_len = COLOR_LEN;
 						bprintf(WHITE_BG);
 					}
 					bprintf("%c", c[j]);
@@ -594,7 +593,6 @@ void draw_rows(void)
 					char *color = syntax_to_color(hl[j], &len);
 					if (strncmp(current_color, color, len)) {
 						memcpy(current_color, color, len);
-						current_color_len = len;
 						bprintf(color);
 					}
 					free(color);
