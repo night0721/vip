@@ -22,6 +22,11 @@
 #define MAUVE_FG     "\033[48;2;203;166;247m"
 #define MAUVE_BG     "\033[38;2;203;166;247m"
 #define YELLOW_BG    "\033[38;2;249;226;175m"
+#define RED_FG		 "\033[48;2;243;139;168m"
+#define RED_BG		 "\033[38;2;243;139;168m"
+
+/* ERROR is red with bold and italic */
+#define ERROR "\033[38;2;243;139;168m\033[1m\033[3m"
 
 enum keys {
 	BACKSPACE = 127,

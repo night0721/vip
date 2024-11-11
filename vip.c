@@ -18,7 +18,7 @@
 #include "config.h"
 
 struct termios newt, oldt;
-int screenrows, screencols;
+int rows, cols;
 editor_t editor[9];
 int editor_idx = 0;
 int editors = 0;
@@ -60,7 +60,7 @@ void bprintf(const char *fmt, ...);
  */
 void draw_status_bar(void)
 {
-	move_cursor(screenrows - 1, 1);
+	move_cursor(rows - 1, 1);
 	/* Reverse and bold */
 	bprintf("\033[7m\033[1m");
 
@@ -118,8 +118,8 @@ void draw_status_bar(void)
 	}
 	bprintf("%s%s%s%s", git, BLACK_BG, WHITE_FG, file);
 
-	while (file_len < screencols) {
-		if (screencols - mode_len - git_len - file_len == info_len + lines_len + coord_len) {
+	while (file_len < cols) {
+		if (cols - mode_len - git_len - file_len == info_len + lines_len + coord_len) {
 			bprintf("%s%s", info, SURFACE_1_BG);
 			if (cur_editor->mode == NORMAL) {
 				bprintf(BLUE_FG);
@@ -147,7 +147,7 @@ void draw_status_bar(void)
 			file_len++;
 		}
 	}
-	bprintf("\033[0m");
+	bprintf("\033[m");
 }
 
 void refresh_screen(void)
@@ -165,14 +165,14 @@ void refresh_screen(void)
 	if (cur_editor->y < cur_editor->rowoff) {
 		cur_editor->rowoff = cur_editor->y;
 	}
-	if (cur_editor->y >= cur_editor->rowoff + screenrows - 3) {
-		cur_editor->rowoff = cur_editor->y - screenrows + 3;
+	if (cur_editor->y >= cur_editor->rowoff + rows - 3) {
+		cur_editor->rowoff = cur_editor->y - rows + 3;
 	}
 	if (cur_editor->rx < cur_editor->coloff) {
 		cur_editor->coloff = cur_editor->rx;
 	}
-	if (cur_editor->rx >= cur_editor->coloff + screencols) {
-		cur_editor->coloff = cur_editor->rx - screencols + 1;
+	if (cur_editor->rx >= cur_editor->coloff + cols) {
+		cur_editor->coloff = cur_editor->rx - cols + 1;
 	}
 
 	bprintf("\033H\033[2 q");
@@ -304,8 +304,9 @@ void del_char(void)
 void init_editor(char *filename)
 {
 	if (editors > 8) {
-		wpprintw("\033[38;2;255;0;0m\033[1mOnly 9 tabs are allowed");
+		wpprintw("%sOnly 9 tabs are allowed", ERROR);
 		readch();
+		wpprintw("");
 		return;
 	}
 	cur_editor = &editor[editors++];
@@ -323,7 +324,7 @@ void init_editor(char *filename)
 	getcwd(cwd, PATH_MAX);
 	strcpy(cur_editor->cwd, cwd);
 
-	if (get_window_size(&screenrows, &screencols) == -1) {
+	if (get_window_size(&rows, &cols) == -1) {
 		die("get_window_size");
 	}
 
@@ -365,7 +366,7 @@ char *prompt_editor(char *prompt, void (*callback)(char *, int))
 	buf[0] = '\0';
 	while (1) {
 		wpprintw(prompt, buf);
-		move_cursor(screenrows, prompt_len - 1 + strlen(buf));
+		move_cursor(rows, prompt_len - 1 + strlen(buf));
 		int c = readch();
 		if (c == DEL_KEY || c == CTRL_KEY('h') || c == BACKSPACE) {
 			if (buflen != 0) {
@@ -564,15 +565,15 @@ void save_file(void)
 
 void draw_rows(void)
 {
-	for (int y = 0; y < screenrows - 1; y++) {
+	for (int y = 0; y < rows - 1; y++) {
 		move_cursor(y + 1, 1);
 		int filerow = y + cur_editor->rowoff;
 		if (filerow >= cur_editor->rows) {
-			if (cur_editor->rows == 0 && y == screenrows / 2) {
+			if (cur_editor->rows == 0 && y == rows / 2) {
 				char welcome[11];
 				snprintf(welcome, sizeof(welcome), "VIP v%s", VERSION);
 				/* Length of welcome message must be 10 */
-				int padding = (screencols - 10) / 2;
+				int padding = (cols - 10) / 2;
 				while (padding--)
 					bprintf(" ");
 				bprintf(welcome);
@@ -580,7 +581,7 @@ void draw_rows(void)
 		} else {
 			int len = cur_editor->row[filerow].render_size - cur_editor->coloff;
 			if (len < 0) len = 0;
-			if (len > screencols) len = screencols;
+			if (len > cols) len = cols;
 			char *c = &cur_editor->row[filerow].render[cur_editor->coloff];
 			unsigned char *hl = &cur_editor->row[filerow].hl[cur_editor->coloff];
 
@@ -892,8 +893,27 @@ void die(const char *s)
 	exit(1);
 }
 
+void handle_sigwinch(int ignore)
+{
+	get_window_size(&rows, &cols);
+	if (cols < 80 || rows < 24) {
+		die("vip: Terminal size needs to be at least 80x24");
+	}
+	refresh_screen();
+}
+
 int main(int argc, char **argv)
 {
+	struct sigaction sa;
+	sa.sa_handler = handle_sigwinch;
+	sa.sa_flags = SA_RESTART;
+	sigemptyset(&sa.sa_mask);
+
+	if (sigaction(SIGWINCH, &sa, NULL) == -1) {
+		perror("sigaction");
+		exit(1);
+	}
+
 	bprintf("\033[?1049h\033[2J\033[2q");
 	if (tcgetattr(STDIN_FILENO, &oldt) == -1) {
 		die("tcgetattr");
@@ -948,10 +968,10 @@ int main(int argc, char **argv)
 				if (c == PAGE_UP) {
 					cur_editor->y = cur_editor->rowoff;
 				} else if (c == PAGE_DOWN) {
-					cur_editor->y = cur_editor->rowoff + screenrows - 1;
+					cur_editor->y = cur_editor->rowoff + rows - 1;
 					if (cur_editor->y > cur_editor->rows) cur_editor->y = cur_editor->rows;
 				}
-				int times = screenrows;
+				int times = rows;
 				while (times--)
 					move_xy(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
 				break;
@@ -1026,7 +1046,7 @@ int main(int argc, char **argv)
 							break;
 						} else {
 							if (cur_editor->dirty) {
-								wpprintw("\033[1m\033[38;2;255;0;0mNo write since last change for buffer \"%s\"\033[0m", cur_editor->filename);
+								wpprintw("%sNo write since last change for buffer \"%s\"", ERROR, cur_editor->filename);
 								cur_editor->mode = NORMAL;
 								break;
 							}
@@ -1153,16 +1173,16 @@ void cleanup(void)
  */
 void wpprintw(const char *fmt, ...)
 {
-	char buffer[screencols];
+	char buffer[cols];
 	va_list args;
 
 	va_start(args, fmt);
 	vsnprintf(buffer, sizeof(buffer), fmt, args);
 	va_end(args);
 
-	move_cursor(screenrows, 1);
+	move_cursor(rows, 1);
 	/* Clear line and print formatted string */
-	bprintf("\033[K%s", buffer);
+	bprintf("\033[K%s\033[0m", buffer);
 }
 
 void move_cursor(int row, int col)
