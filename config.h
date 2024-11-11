@@ -87,7 +87,8 @@ typedef struct {
 	row_t *row;
 	int dirty;
 	int mode;
-	char *filename;
+	char filename[PATH_MAX];
+	char cwd[PATH_MAX];
 	language_t *syntax;
 } editor_t;
 
@@ -101,7 +102,7 @@ language_t langs[] = {
 		"//",
 		"/*",
 		"*/",
-		{ "switch", "if", "while", "for", "break", "continue", "return", "else", "struct", "union", "typedef", "static", "enum", "case", "sizeof", "#include", "int|", "long|", "double|", "float|", "char|", "unsigned|", "void|", NULL },
+		{ "switch", "if", "while", "for", "break", "continue", "return", "else", "struct", "union", "typedef", "static", "enum", "case", "sizeof", "#include", "#define", "#if", "#elseif", "#endif", "int|", "long|", "double|", "float|", "char|", "unsigned|", "void|", NULL },
 		{ ".c", ".h", ".cpp", NULL },
 	},
 };

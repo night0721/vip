@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -20,6 +21,7 @@ struct termios newt, oldt;
 int screenrows, screencols;
 editor_t editor[9];
 int editor_idx = 0;
+int editors = 0;
 editor_t *cur_editor;
 
 void draw_status_bar(void);
@@ -87,8 +89,8 @@ void draw_status_bar(void)
 
 	char git[80], file[80], info[80], lines[80], coord[80];
 	int git_len = snprintf(git, sizeof(git), " %s | %s ", "master", "+1");
-	int file_len = snprintf(file, sizeof(file), " %.20s %s",
-			cur_editor->filename ? cur_editor->filename : "[No Name]", cur_editor->dirty ? "[+]" : "");
+	int file_len = snprintf(file, sizeof(file), " %s %s",
+			strlen(cur_editor->filename) > 0 ? cur_editor->filename : "[No Name]", cur_editor->dirty ? "[+]" : "");
 	int info_len = snprintf(info, sizeof(info), " %s ", cur_editor->syntax ? cur_editor->syntax->filetype : "");
 	int lines_len;
 	if (cur_editor->rows == 0 || cur_editor->rows == cur_editor->y + 1) {
@@ -301,7 +303,12 @@ void del_char(void)
 
 void init_editor(char *filename)
 {
-	cur_editor = &editor[editor_idx];
+	if (editors > 8) {
+		wpprintw("\033[38;2;255;0;0m\033[1mOnly 9 tabs are allowed");
+		readch();
+		return;
+	}
+	cur_editor = &editor[editors++];
 	cur_editor->x = 0;
 	cur_editor->y = 0;
 	cur_editor->rx = 0;
@@ -311,18 +318,17 @@ void init_editor(char *filename)
 	cur_editor->row = NULL;
 	cur_editor->dirty = 0;
 	cur_editor->mode = NORMAL;
-	cur_editor->filename = NULL;
 	cur_editor->syntax = NULL;
+	char cwd[PATH_MAX];
+	getcwd(cwd, PATH_MAX);
+	strcpy(cur_editor->cwd, cwd);
 
 	if (get_window_size(&screenrows, &screencols) == -1) {
 		die("get_window_size");
 	}
 
-	if (cur_editor->filename) {
-		free(cur_editor->filename);
-	}
 	if (filename) {
-		cur_editor->filename = strdup(filename);
+		strcpy(cur_editor->filename, basename(filename));
 
 		FILE *fp = fopen(filename, "r");
 		if (!fp) {
@@ -345,6 +351,8 @@ void init_editor(char *filename)
 		fclose(fp);
 		/* Reset dirtiness as nothing is modified yet */
 		cur_editor->dirty = 0;
+	} else {
+		strcpy(cur_editor->filename, "");
 	}
 }
 
@@ -526,12 +534,13 @@ int readch(void)
 
 void save_file(void)
 {
-	if (cur_editor->filename == NULL) {
-		cur_editor->filename = prompt_editor("Save as: %s", NULL);
-		if (cur_editor->filename == NULL) {
+	if (strlen(cur_editor->filename) == 0) {
+		char *new_filename = prompt_editor("Save as: %s", NULL);
+		if (new_filename == NULL) {
 			wpprintw("Save aborted");
 			return;
 		}
+		strcpy(cur_editor->filename, new_filename);
 		select_syntax();
 	}
 	int fd = open(cur_editor->filename, O_RDWR | O_CREAT, 0644);
@@ -856,7 +865,7 @@ char *syntax_to_color(int hl, size_t *len)
 
 void select_syntax(void)
 {
-	if (cur_editor->filename == NULL) return;
+	if (strlen(cur_editor->filename) == 0) return;
 	cur_editor->syntax = NULL;
 	char *ext = strrchr(cur_editor->filename, '.');
 	for (uint8_t i = 0; i < LANGS_LEN; i++) {
@@ -878,7 +887,7 @@ void select_syntax(void)
 
 void die(const char *s)
 {
-	bprintf("\033[2J\033[H");
+	cleanup();
 	perror(s);
 	exit(1);
 }
@@ -1096,13 +1105,10 @@ int main(int argc, char **argv)
 					if (c == 'p') {
 						c = readch();
 						if (c == 'v') {
-							char cwd[PATH_MAX];
-							getcwd(cwd, PATH_MAX);
-
 							pid_t pid = fork();
 							if (pid == 0) {
 								/* Child process */
-								execlp("ccc", "ccc", cwd, "-p", NULL);
+								execlp("ccc", "ccc", cur_editor->cwd, "-p", NULL);
 								_exit(1); /* Exit if exec fails */
 							} else if (pid > 0) {
 								/* Parent process */
@@ -1110,6 +1116,9 @@ int main(int argc, char **argv)
 								FILE *f = fopen("/home/night/.cache/ccc/opened_file", "r");
 								char opened_file[PATH_MAX];
 								fread(opened_file, sizeof(char), PATH_MAX, f);
+								opened_file[strcspn(opened_file, "\n")] = 0;
+
+								init_editor(opened_file);
 							} else {
 								/* Fork failed */
 							}
