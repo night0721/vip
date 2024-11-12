@@ -823,13 +823,13 @@ void update_highlight(row_t *row)
 		}
 
 		if (in_escape) {
-			if (!(c > 47 && c < 58)) {
-				in_escape = 0;
-			} else {
+			if (c > 47 && c < 58 || c == 'n' || c == 't' || c == 'r') {
 				row->hl[i] = ESCAPE;
 				i++;
 				prev_sep = 0;
 				continue;
+			} else {
+				in_escape = 0;
 			}
 		} else {
 			if (c == '\\') {
