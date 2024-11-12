@@ -595,6 +595,10 @@ void draw_rows(void)
 							bprintf(GREEN_BG);
 							break;
 
+						case CHAR:
+							bprintf(TEAL_BG);
+							break;
+
 						case SYMBOL:
 							bprintf(SKY_BG);
 							break;
@@ -772,6 +776,7 @@ void update_highlight(row_t *row)
 
 	int prev_sep = 1;
 	int in_string = 0;
+	int in_char = 0;
 	int in_include = 0;
 	int in_comment = row->idx > 0 && cur_editor->row[row->idx - 1].opened_comment;
 
@@ -823,6 +828,26 @@ void update_highlight(row_t *row)
 			if (c == '"') {
 				in_string = c;
 				row->hl[i] = STRING;
+				i++;
+				continue;
+			}
+		}
+		
+		if (in_char) {
+			row->hl[i] = CHAR;
+			if (c == '\\' && i + 1 < row->render_size) {
+				row->hl[i + 1] = CHAR;
+				i += 2;
+				continue;
+			}
+			if (c == in_char) in_char = 0;
+			i++;
+			prev_sep = 1;
+			continue;
+		} else {
+			if (c == '\'') {
+				in_char = c;
+				row->hl[i] = CHAR;
 				i++;
 				continue;
 			}

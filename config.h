@@ -24,6 +24,8 @@
 #define YELLOW_BG    "\033[38;2;249;226;175m"
 #define RED_FG		 "\033[48;2;243;139;168m"
 #define RED_BG		 "\033[38;2;243;139;168m"
+#define TEAL_FG		 "\033[48;2;148;226;213m"
+#define TEAL_BG		 "\033[38;2;148;226;213m"
 
 /* ERROR is red with bold and italic */
 #define ERROR "\033[38;2;243;139;168m\033[1m\033[3m"
@@ -58,6 +60,7 @@ enum highlight {
 	KW_FN,
 	KW_BRACKET,
 	STRING,
+	CHAR,
 	NUMBER,
 	MATCH,
 	RESET
