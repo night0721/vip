@@ -585,9 +585,6 @@ void draw_rows(void)
 			char *c = &cur_editor->row[filerow].render[cur_editor->coloff];
 			unsigned char *hl = &cur_editor->row[filerow].hl[cur_editor->coloff];
 
-			FILE *f=fopen("/home/night/a", "a");
-			fprintf(f, "%s, cur_editor->coloff: %d\n", c, cur_editor->coloff);
-			fclose(f);
 			for (int j = 0; j < len; j++) {
 				if (iscntrl(c[j])) {
 					bprintf("%s%c\033[m", OVERLAY_2_BG, '@' + c[j]);
