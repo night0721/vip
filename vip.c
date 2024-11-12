@@ -921,7 +921,7 @@ void update_highlight(row_t *row)
 			continue;
 		}
 
-		if (c == ';') {
+		if (c == ';' || c == ',') {
 			row->hl[i] = TERMINATOR;
 			prev_sep = 1;
 			i++;
