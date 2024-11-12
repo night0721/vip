@@ -1015,10 +1015,6 @@ void handle_sigwinch(int ignore)
 
 int main(int argc, char **argv)
 {
-	if (get_window_size(&rows, &cols) == -1) {
-		die("get_window_size");
-	}
-
 	struct sigaction sa;
 	sa.sa_handler = handle_sigwinch;
 	sa.sa_flags = SA_RESTART;
@@ -1036,6 +1032,9 @@ int main(int argc, char **argv)
 	if (argc > 2 && !strcmp(argv[1], "-c")) {
 		cat_mode = 1;
 	} else {
+		if (get_window_size(&rows, &cols) == -1) {
+			die("get_window_size");
+		}
 		bprintf("\033[?1049h\033[2J\033[2q");
 		
 		newt = oldt;
