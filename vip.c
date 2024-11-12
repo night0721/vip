@@ -877,13 +877,14 @@ void update_highlight(row_t *row)
 			/* Check for function */
 			int word_len = 0;
 			while (!is_separator(row->render[i])) {
-				word_len++ = row->render[i++];
+				word_len++;
+				i++;
 			}
 			if (row->render[i] == '(') {
 				memset(&row->hl[i - word_len], KW_FN, word_len);
 				prev_sep = 1;
 			} else {
-				prev_sep = is_seperator(row->render[i]);
+				prev_sep = is_separator(row->render[i]);
 			}
 			continue;
 		}
