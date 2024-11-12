@@ -599,8 +599,16 @@ void draw_rows(void)
 							bprintf(TEAL_BG);
 							break;
 
+						case ESCAPE:
+							bprintf(PINK_BG);
+							break;
+
 						case SYMBOL:
 							bprintf(SKY_BG);
+							break;
+
+						case TERMINATOR:
+							bprintf(OVERLAY_2_BG);
 							break;
 
 						case COMMENT:
@@ -754,7 +762,7 @@ int is_separator(int c)
 
 int is_symbol(int c)
 {
-	return strchr("+-/*=~%><:?&", c) != NULL;
+	return strchr("+-/*=~%><:?&|.", c) != NULL;
 }
 
 void update_highlight(row_t *row)
@@ -778,6 +786,7 @@ void update_highlight(row_t *row)
 	int in_string = 0;
 	int in_char = 0;
 	int in_include = 0;
+	int in_escape = 0;
 	int in_comment = row->idx > 0 && cur_editor->row[row->idx - 1].opened_comment;
 
 	int i = 0;
@@ -809,6 +818,24 @@ void update_highlight(row_t *row)
 				memset(&row->hl[i], MLCOMMENT, mcs_len);
 				i += mcs_len;
 				in_comment = 1;
+				continue;
+			}
+		}
+
+		if (in_escape) {
+			if (!(c > 47 && c < 58)) {
+				in_escape = 0;
+			} else {
+				row->hl[i] = ESCAPE;
+				i++;
+				prev_sep = 0;
+				continue;
+			}
+		} else {
+			if (c == '\\') {
+				in_escape = 1;
+				row->hl[i] = ESCAPE;
+				i++;
 				continue;
 			}
 		}
@@ -867,13 +894,13 @@ void update_highlight(row_t *row)
 				i++;
 				continue;
 			}
-		}
+		}	
 
 		if ((isdigit(c) && (prev_sep || prev_hl == NUMBER)) ||
 				(c == '.' && prev_hl == NUMBER) ||
 				(c >= 'A' && c <= 'Z') ||
 				(c == '_' && prev_hl == NUMBER)
-		   ) {
+		) {
 			row->hl[i] = NUMBER;
 			i++;
 			prev_sep = 0;
@@ -889,6 +916,13 @@ void update_highlight(row_t *row)
 
 		if (is_symbol(c)) {
 			row->hl[i] = SYMBOL;
+			prev_sep = 1;
+			i++;
+			continue;
+		}
+
+		if (c == ';') {
+			row->hl[i] = TERMINATOR;
 			prev_sep = 1;
 			i++;
 			continue;

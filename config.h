@@ -26,6 +26,8 @@
 #define RED_BG		 "\033[38;2;243;139;168m"
 #define TEAL_FG		 "\033[48;2;148;226;213m"
 #define TEAL_BG		 "\033[38;2;148;226;213m"
+#define PINK_FG		 "\033[48;2;245;194;231m"
+#define PINK_BG		 "\033[38;2;245;194;231m"
 
 /* ERROR is red with bold and italic */
 #define ERROR "\033[38;2;243;139;168m\033[1m\033[3m"
@@ -54,6 +56,7 @@ enum highlight {
 	DEFAULT = 0,
 	SYMBOL,
 	COMMENT,
+	TERMINATOR,
 	MLCOMMENT,
 	KW,
 	KW_TYPE,
@@ -61,6 +64,7 @@ enum highlight {
 	KW_BRACKET,
 	STRING,
 	CHAR,
+	ESCAPE,
 	NUMBER,
 	MATCH,
 	RESET
@@ -108,7 +112,7 @@ language_t langs[] = {
 		"//",
 		"/*",
 		"*/",
-		{ "switch", "if", "while", "for", "break", "continue", "return", "else", "struct", "union", "typedef", "static", "enum", "case", "sizeof", "#include", "#define", "#if", "#elseif", "#endif", "int|", "long|", "double|", "float|", "char|", "unsigned|", "void|", "size_t|", "uint8_t|", NULL },
+		{ "const", "switch", "if", "while", "for", "break", "continue", "return", "else", "struct", "union", "typedef", "static", "enum", "case", "sizeof", "#include", "#define", "#if", "#elseif", "#endif", "int|", "long|", "double|", "float|", "char|", "unsigned|", "void|", "size_t|", "uint8_t|", NULL },
 		{ ".c", ".h", ".cpp", NULL },
 	},
 };
