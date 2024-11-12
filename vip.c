@@ -25,7 +25,6 @@ editor_t *cur_editor;
 
 void draw_status_bar(void);
 void refresh_screen(void);
-void draw_rows(void);
 void move_xy(int key);
 void insert_char(int c);
 void insert_new_line(void);
@@ -44,7 +43,6 @@ void del_row(int at);
 char *export_buffer(int *buflen);
 int is_separator(int c);
 void update_highlight(row_t *row);
-char *syntax_to_color(int hl, size_t *len);
 void select_syntax(void);
 void die(const char *s);
 void cleanup(void);
@@ -580,31 +578,64 @@ void draw_rows(void)
 			char *c = &cur_editor->row[filerow].render[cur_editor->coloff];
 			unsigned char *hl = &cur_editor->row[filerow].hl[cur_editor->coloff];
 
-			char *current_color = malloc(COLOR_LEN * 2);
 			for (int j = 0; j < len; j++) {
 				if (iscntrl(c[j])) {
-					bprintf("\033[7m^%c\033[m", '@' + c[j]);
-					if (strncmp(current_color, WHITE_BG, COLOR_LEN)) {
-						bprintf(current_color);
-					}
+					bprintf("%s%c\033[m", OVERLAY_2_BG, '@' + c[j]);
 				} else if (hl[j] == NORMAL) {
-					if (strncmp(current_color, WHITE_BG, COLOR_LEN)) {
-						memcpy(current_color, WHITE_BG, COLOR_LEN);
-						bprintf(WHITE_BG);
-					}
-					bprintf("%c", c[j]);
+					bprintf("%s%c", WHITE_BG, c[j]);
 				} else {
-					size_t len;
-					char *color = syntax_to_color(hl[j], &len);
-					if (strncmp(current_color, color, len)) {
-						memcpy(current_color, color, len);
-						bprintf(color);
+					switch (hl[j]) {
+						case NUMBER:
+							bprintf(PEACH_BG);
+							break;
+
+						case STRING:
+							bprintf(GREEN_BG);
+							break;
+
+						case SYMBOL:
+							bprintf(SKY_BG);
+							break;
+
+						case COMMENT:
+						case MLCOMMENT:
+							bprintf("\033[3m");
+							bprintf(OVERLAY_2_BG);
+							bprintf("\033[23m");
+							break;
+
+						case KW:
+							bprintf(MAUVE_BG);
+							break;
+
+						case KW_TYPE:
+							bprintf(YELLOW_BG);
+							break;
+
+						case KW_FN:
+							bprintf(BLUE_BG);
+							break;
+
+						case KW_BRACKET:
+							bprintf(RED_BG);
+							break;
+
+						case MATCH:
+							bprintf(BLACK_BG);
+							bprintf(SKY_FG);
+							break;
+
+						case RESET:
+							bprintf(BLACK_BG);
+							bprintf(SKY_FG);
+							break;
+
+						default: 
+							bprintf(WHITE_BG);
 					}
-					free(color);
 					bprintf("%c", c[j]);
 				}
 			}
-			free(current_color);
 			bprintf(WHITE_BG);
 		}
 
@@ -791,7 +822,7 @@ void update_highlight(row_t *row)
 			continue;
 		} else {
 			if (c == '<' && (row->render[i-1] == 'e' || (row->render[i-1] == ' ' &&
-						row->render[i-2] == 'e'))) {
+							row->render[i-2] == 'e'))) {
 				in_include = 1;
 				row->hl[i] = STRING;
 				i++;
@@ -803,7 +834,7 @@ void update_highlight(row_t *row)
 				(c == '.' && prev_hl == NUMBER) ||
 				(c >= 'A' && c <= 'Z') ||
 				(c == '_' && prev_hl == NUMBER)
-		) {
+		   ) {
 			row->hl[i] = NUMBER;
 			i++;
 			prev_sep = 0;
@@ -867,65 +898,6 @@ void update_highlight(row_t *row)
 	row->opened_comment = in_comment;
 	if (changed && row->idx + 1 < cur_editor->rows)
 		update_highlight(&cur_editor->row[row->idx + 1]);
-}
-
-char *syntax_to_color(int hl, size_t *len)
-{
-	switch (hl) {
-		case NUMBER:
-			*len = COLOR_LEN;
-			return strdup(PEACH_BG);
-
-		case STRING:
-			*len = COLOR_LEN;
-			return strdup(GREEN_BG);
-
-		case SYMBOL:
-			*len = COLOR_LEN;
-			return strdup(SKY_BG);
-
-		case COMMENT:;
-		case MLCOMMENT:;
-					   /*
-			char *color = malloc(COLOR_LEN * 2 + 1);
-			snprintf(color, COLOR_LEN * 2 + 1, "\033[3m%s\033[23m", OVERLAY_2_BG);
-			*len = COLOR_LEN * 2;
-			return color;*/
-			*len = COLOR_LEN;
-			return strdup(OVERLAY_2_BG);
-
-		case KW:
-			*len = COLOR_LEN;
-			return strdup(MAUVE_BG);
-
-		case KW_TYPE:
-			*len = COLOR_LEN;
-			return strdup(YELLOW_BG);
-
-		case KW_FN:
-			*len = COLOR_LEN;
-			return strdup(BLUE_BG);
-
-		case KW_BRACKET:
-			*len = COLOR_LEN;
-			return strdup(RED_BG);
-
-		case MATCH:;
-			char *str = malloc(COLOR_LEN * 2 + 1);
-			snprintf(str, COLOR_LEN * 2 + 1, "%s%s", BLACK_BG, SKY_FG);
-			*len = COLOR_LEN * 2;
-			return str;
-
-		case RESET:;
-			char *res = malloc(COLOR_LEN * 2 + 1);
-			snprintf(res, COLOR_LEN * 2 + 1, "%s%s", WHITE_BG, BLACK_FG);
-			*len = COLOR_LEN * 2;
-			return res;
-
-		default: 
-			*len = COLOR_LEN;
-			return strdup(WHITE_BG);
-	}
 }
 
 void select_syntax(void)
