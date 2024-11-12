@@ -41,6 +41,8 @@ void update_row(row_t *row);
 void insert_row(int at, char *s, size_t len);
 void del_row(int at);
 char *export_buffer(int *buflen);
+void replace_home(char *path);
+int is_symbol(int c);
 int is_separator(int c);
 void update_highlight(row_t *row);
 void select_syntax(void);
@@ -729,6 +731,18 @@ char *export_buffer(int *buflen)
 	return buf;
 }
 
+void replace_home(char *path)
+{
+	char *home = getenv("HOME");
+	if (home == NULL) {
+		wpprintw("$HOME not defined");
+		return;
+	}
+	/* replace ~ with home */
+	snprintf(path, strlen(path) + strlen(home), "%s%s", home, path + 1);
+	return;
+}
+
 int is_separator(int c)
 {
 	return isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL;
@@ -736,7 +750,7 @@ int is_separator(int c)
 
 int is_symbol(int c)
 {
-	return strchr("+-/*=~%><:?", c) != NULL;
+	return strchr("+-/*=~%><:?&", c) != NULL;
 }
 
 void update_highlight(row_t *row)
@@ -884,7 +898,7 @@ void update_highlight(row_t *row)
 				memset(&row->hl[i - word_len], KW_FN, word_len);
 				prev_sep = 1;
 			} else {
-				prev_sep = is_separator(row->render[i]);
+				prev_sep = 0;
 			}
 			continue;
 		}
@@ -1171,7 +1185,10 @@ int main(int argc, char **argv)
 							} else if (pid > 0) {
 								/* Parent process */
 								waitpid(pid, NULL, 0);
-								FILE *f = fopen("/home/night/.cache/ccc/opened_file", "r");
+								char fpath[PATH_MAX];
+								strcpy(fpath, "~/.cache/ccc/opened_file");
+								replace_home(fpath);
+								FILE *f = fopen(fpath, "r");
 								char opened_file[PATH_MAX];
 								fread(opened_file, sizeof(char), PATH_MAX, f);
 								opened_file[strcspn(opened_file, "\n")] = 0;
