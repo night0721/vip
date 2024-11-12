@@ -617,7 +617,9 @@ void update_row(row_t *row)
 	int tabs = 0;
 	for (int j = 0; j < row->size; j++)
 		if (row->chars[j] == '\t') tabs++;
-	free(row->render);
+	if (row->render) {
+		free(row->render);
+	}
 	row->render = malloc(row->size + tabs * (TAB_SIZE - 1) + 1);
 	int idx = 0;
 	for (int j = 0; j < row->size; j++) {
@@ -653,6 +655,8 @@ void insert_row(int at, char *s, size_t len)
 	cur_editor->row[at].chars[len] = '\0';
 	cur_editor->row[at].hl = NULL;
 	cur_editor->row[at].opened_comment = 0;
+	cur_editor->row[at].render_size = 0;
+	cur_editor->row[at].render = NULL;
 	update_row(&cur_editor->row[at]);
 
 	cur_editor->rows++;
