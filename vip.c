@@ -701,7 +701,7 @@ int is_separator(int c)
 
 int is_symbol(int c)
 {
-	return strchr("+-/*=~%><", c) != NULL;
+	return strchr("+-/*=~%><:?", c) != NULL;
 }
 
 void update_highlight(row_t *row)
@@ -786,7 +786,8 @@ void update_highlight(row_t *row)
 			prev_sep = 1;
 			continue;
 		} else {
-			if (c == '<') {
+			if (c == '<' && (row->render[i-1] == 'e' || (row->render[i-1] == ' ' &&
+						row->render[i-2] == 'e'))) {
 				in_include = 1;
 				row->hl[i] = STRING;
 				i++;
@@ -812,8 +813,7 @@ void update_highlight(row_t *row)
 			continue;
 		}
 
-		if (c == '*' || c == '&' || c == '=' || c == '+' || c == '|' || c == '!' ||
-				c == '<' || c == '>') {
+		if (is_symbol(c)) {
 			row->hl[i] = SYMBOL;
 			prev_sep = 1;
 			i++;
@@ -844,11 +844,9 @@ void update_highlight(row_t *row)
 			char word[128];
 			int word_len = 0;
 			while (!is_separator(row->render[i])) {
-				printf("i: %d, row->render[i]: %c\n", i, row->render[i]);
 				word[word_len++] = row->render[i++];
 			}
 			word[word_len] = '\0';
-			printf("word: %s\n", word);
 			if (row->render[i] == '(') {
 				memset(&row->hl[i - word_len], KW_FN, word_len);
 				prev_sep = 1;
