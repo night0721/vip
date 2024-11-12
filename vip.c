@@ -601,7 +601,6 @@ void draw_rows(void)
 						case MLCOMMENT:
 							bprintf("\033[3m");
 							bprintf(OVERLAY_2_BG);
-							bprintf("\033[23m");
 							break;
 
 						case KW:
@@ -634,6 +633,9 @@ void draw_rows(void)
 							bprintf(WHITE_BG);
 					}
 					bprintf("%c", c[j]);
+					if (hl[j] == COMMENT || hl[j] == MLCOMMENT) {
+						bprintf("\033[23m");
+					}
 				}
 			}
 			bprintf(WHITE_BG);
@@ -648,9 +650,7 @@ void update_row(row_t *row)
 	int tabs = 0;
 	for (int j = 0; j < row->size; j++)
 		if (row->chars[j] == '\t') tabs++;
-	if (row->render) {
-		free(row->render);
-	}
+	free(row->render);
 	row->render = malloc(row->size + tabs * (TAB_SIZE - 1) + 1);
 	int idx = 0;
 	for (int j = 0; j < row->size; j++) {
