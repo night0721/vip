@@ -93,8 +93,8 @@ void draw_status_bar(void)
 			strlen(cur_editor->filename) > 0 ? cur_editor->filename : "[No Name]", cur_editor->dirty ? "[+]" : "");
 	int info_len = snprintf(info, sizeof(info), " %s ", cur_editor->syntax ? cur_editor->syntax->filetype : "");
 	int lines_len;
-	if (cur_editor->rows == 0 || cur_editor->rows == cur_editor->y + 1) {
-		lines_len = snprintf(lines, sizeof(lines), " %s ", cur_editor->rows == 0 ? "Top" : "Bot");
+	if (cur_editor->y == 0 || cur_editor->rows == cur_editor->y + 1) {
+		lines_len = snprintf(lines, sizeof(lines), " %s ", cur_editor->y == 0 ? "Top" : "Bot");
 	} else {
 		lines_len = snprintf(lines, sizeof(lines), " %d%% ", ((cur_editor->y + 1) * 100 / cur_editor->rows));
 	}
