@@ -17,6 +17,7 @@
 
 #include "config.h"
 
+int cat_mode = 0;
 struct termios newt, oldt;
 int rows, cols;
 editor_t editor[9];
@@ -174,13 +175,15 @@ void refresh_screen(void)
 		cur_editor->coloff = cur_editor->rx - cols + 1;
 	}
 
-	bprintf("\033H\033[2 q");
+	if (!cat_mode)
+		bprintf("\033H\033[2 q");
 
 	draw_rows();
-	draw_status_bar();
-
-	move_cursor((cur_editor->y - cur_editor->rowoff) + 1,
-			(cur_editor->rx - cur_editor->coloff) + 1);
+	if (!cat_mode) {
+		draw_status_bar();
+		move_cursor((cur_editor->y - cur_editor->rowoff) + 1,
+				(cur_editor->rx - cur_editor->coloff) + 1);
+	}
 }
 
 void move_xy(int key)
@@ -560,8 +563,9 @@ void save_file(void)
 
 void draw_rows(void)
 {
-	for (int y = 0; y < rows - 1; y++) {
-		move_cursor(y + 1, 1);
+	for (int y = 0; y < cur_editor->rows; y++) {
+		if (!cat_mode && y > rows - 2) return;
+		if (!cat_mode) move_cursor(y + 1, 1);
 		int filerow = y + cur_editor->rowoff;
 		if (filerow >= cur_editor->rows) {
 			if (cur_editor->rows == 0 && y == rows / 2) {
@@ -655,7 +659,7 @@ void draw_rows(void)
 			bprintf(WHITE_BG);
 		}
 
-		bprintf("\033[K");
+		bprintf("\033[K\n");
 	}
 }
 
@@ -823,7 +827,7 @@ void update_highlight(row_t *row)
 		}
 
 		if (in_escape) {
-			if (c > 47 && c < 58 || c == 'n' || c == 't' || c == 'r') {
+			if ((c > 47 && c < 58) || c == 'n' || c == 't' || c == 'r') {
 				row->hl[i] = ESCAPE;
 				i++;
 				prev_sep = 0;
@@ -859,7 +863,7 @@ void update_highlight(row_t *row)
 				continue;
 			}
 		}
-		
+
 		if (in_char) {
 			row->hl[i] = CHAR;
 			if (c == '\\' && i + 1 < row->render_size) {
@@ -900,7 +904,7 @@ void update_highlight(row_t *row)
 				(c == '.' && prev_hl == NUMBER) ||
 				(c >= 'A' && c <= 'Z') ||
 				(c == '_' && prev_hl == NUMBER)
-		) {
+		   ) {
 			row->hl[i] = NUMBER;
 			i++;
 			prev_sep = 0;
@@ -1025,23 +1029,38 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	bprintf("\033[?1049h\033[2J\033[2q");
 	if (tcgetattr(STDIN_FILENO, &oldt) == -1) {
 		die("tcgetattr");
 	}
-	newt = oldt;
-	/* Disable canonical mode and echo */
-	newt.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-	newt.c_cflag |= (CS8);
-	newt.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-	newt.c_cc[VMIN] = 0;
-	newt.c_cc[VTIME] = 1;
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &newt) == -1) {
-		die("tcsetattr");
+
+	if (argc > 2 && !strcmp(argv[1], "-c")) {
+		cat_mode = 1;
+	} else {
+		bprintf("\033[?1049h\033[2J\033[2q");
+		
+		newt = oldt;
+		/* Disable canonical mode and echo */
+		newt.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+		newt.c_cflag |= (CS8);
+		newt.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+		newt.c_cc[VMIN] = 0;
+		newt.c_cc[VTIME] = 1;
+		if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &newt) == -1) {
+			die("tcsetattr");
+		}
 	}
+
 	for (int i = 0; i < argc; i++) {
 		/* Create tabs for each arg */
-		init_editor(i == 0 ? NULL : argv[i]);
+		if (argv[i][0] != '-') {
+			init_editor(i == 0 ? NULL : argv[i]);
+		}
+	}
+
+	if (cat_mode) {
+		cleanup();
+		refresh_screen();
+		return 0;
 	}
 
 	while (1) {
@@ -1284,7 +1303,8 @@ void cleanup(void)
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &oldt) == -1) {
 		die("tcsetattr");
 	}
-	bprintf("\033[2J\033[?1049l");
+	if (!cat_mode)
+		bprintf("\033[2J\033[?1049l");
 }
 
 /*
@@ -1354,5 +1374,9 @@ void bprintf(const char *fmt, ...)
 	vsnprintf(buffer, sizeof(buffer), fmt, args);
 	va_end(args);
 
-	write(STDOUT_FILENO, buffer, strlen(buffer));
+	if (cat_mode) {
+		printf("%s", buffer);
+	} else {
+		write(STDOUT_FILENO, buffer, strlen(buffer));
+	}
 }
