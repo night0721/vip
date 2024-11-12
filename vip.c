@@ -20,7 +20,6 @@
 struct termios newt, oldt;
 int rows, cols;
 editor_t editor[9];
-int editor_idx = 0;
 int editors = 0;
 editor_t *cur_editor;
 
@@ -323,10 +322,6 @@ void init_editor(char *filename)
 	char cwd[PATH_MAX];
 	getcwd(cwd, PATH_MAX);
 	strcpy(cur_editor->cwd, cwd);
-
-	if (get_window_size(&rows, &cols) == -1) {
-		die("get_window_size");
-	}
 
 	if (filename) {
 		strcpy(cur_editor->filename, basename(filename));
@@ -652,14 +647,10 @@ void insert_row(int at, char *s, size_t len)
 	}
 
 	cur_editor->row[at].idx = at;
-
 	cur_editor->row[at].size = len;
 	cur_editor->row[at].chars = malloc(len + 1);
 	memcpy(cur_editor->row[at].chars, s, len);
 	cur_editor->row[at].chars[len] = '\0';
-
-	cur_editor->row[at].render_size = 0;
-	cur_editor->row[at].render = NULL;
 	cur_editor->row[at].hl = NULL;
 	cur_editor->row[at].opened_comment = 0;
 	update_row(&cur_editor->row[at]);
@@ -708,6 +699,11 @@ int is_separator(int c)
 	return isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL;
 }
 
+int is_symbol(int c)
+{
+	return strchr("+-/*=~%><", c) != NULL;
+}
+
 void update_highlight(row_t *row)
 {
 	row->hl = realloc(row->hl, row->render_size);
@@ -727,7 +723,8 @@ void update_highlight(row_t *row)
 
 	int prev_sep = 1;
 	int in_string = 0;
-	int in_comment = (row->idx > 0 && cur_editor->row[row->idx - 1].opened_comment);
+	int in_include = 0;
+	int in_comment = row->idx > 0 && cur_editor->row[row->idx - 1].opened_comment;
 
 	int i = 0;
 	while (i < row->render_size) {
@@ -762,36 +759,65 @@ void update_highlight(row_t *row)
 			}
 		}
 
-		if (cur_editor->syntax->flags & HL_STRINGS) {
-			if (in_string) {
-				row->hl[i] = STRING;
-				if (c == '\\' && i + 1 < row->render_size) {
-					row->hl[i + 1] = STRING;
-					i += 2;
-					continue;
-				}
-				if (c == in_string) in_string = 0;
-				i++;
-				prev_sep = 1;
+		if (in_string) {
+			row->hl[i] = STRING;
+			if (c == '\\' && i + 1 < row->render_size) {
+				row->hl[i + 1] = STRING;
+				i += 2;
 				continue;
-			} else {
-				if (c == '"') {
-					in_string = c;
-					row->hl[i] = STRING;
-					i++;
-					continue;
-				}
+			}
+			if (c == in_string) in_string = 0;
+			i++;
+			prev_sep = 1;
+			continue;
+		} else {
+			if (c == '"') {
+				in_string = c;
+				row->hl[i] = STRING;
+				i++;
+				continue;
 			}
 		}
 
-		if (cur_editor->syntax->flags & HL_NUMBERS) {
-			if ((isdigit(c) && (prev_sep || prev_hl == NUMBER)) ||
-					(c == '.' && prev_hl == NUMBER)) {
-				row->hl[i] = NUMBER;
+		if (in_include) {
+			row->hl[i] = STRING;
+			if (c == '>') in_include = 0;
+			i++;
+			prev_sep = 1;
+			continue;
+		} else {
+			if (c == '<') {
+				in_include = 1;
+				row->hl[i] = STRING;
 				i++;
-				prev_sep = 0;
 				continue;
 			}
+		}
+
+		if ((isdigit(c) && (prev_sep || prev_hl == NUMBER)) ||
+				(c == '.' && prev_hl == NUMBER) ||
+				(c >= 'A' && c <= 'Z') ||
+				(c == '_' && prev_hl == NUMBER)
+		) {
+			row->hl[i] = NUMBER;
+			i++;
+			prev_sep = 0;
+			continue;
+		}
+
+		if (c == '(' || c == ')' || c == '[' || c == ']' || c == '{' || c == '}') {
+			row->hl[i] = KW_BRACKET;
+			prev_sep = 1;
+			i++;
+			continue;
+		}
+
+		if (c == '*' || c == '&' || c == '=' || c == '+' || c == '|' || c == '!' ||
+				c == '<' || c == '>') {
+			row->hl[i] = SYMBOL;
+			prev_sep = 1;
+			i++;
+			continue;
 		}
 
 		if (prev_sep) {
@@ -800,20 +826,39 @@ void update_highlight(row_t *row)
 				int klen = strlen(keywords[j]);
 				int type_keyword = keywords[j][klen - 1] == '|';
 				if (type_keyword) klen--;
+
 				if (!strncmp(&row->render[i], keywords[j], klen) &&
 						is_separator(row->render[i + klen])) {
-					memset(&row->hl[i], type_keyword ? KEYWORD2 : KEYWORD1, klen);
+					memset(&row->hl[i], type_keyword ? KW_TYPE : KW, klen);
 					i += klen;
 					break;
 				}
 			}
+			/* Matched a keyword */
 			if (keywords[j] != NULL) {
 				prev_sep = 0;
 				continue;
 			}
+			/* Check for function */
+			/* Assume maximum function name is 128 characters */
+			char word[128];
+			int word_len = 0;
+			while (!is_separator(row->render[i])) {
+				printf("i: %d, row->render[i]: %c\n", i, row->render[i]);
+				word[word_len++] = row->render[i++];
+			}
+			word[word_len] = '\0';
+			printf("word: %s\n", word);
+			if (row->render[i] == '(') {
+				memset(&row->hl[i - word_len], KW_FN, word_len);
+				prev_sep = 1;
+			} else {
+				prev_sep = 0;
+			}
+			continue;
 		}
 
-		prev_sep = is_separator(c);
+		prev_sep = is_separator(row->render[i]);
 		i++;
 	}
 	int changed = (row->opened_comment != in_comment);
@@ -833,34 +878,51 @@ char *syntax_to_color(int hl, size_t *len)
 			*len = COLOR_LEN;
 			return strdup(GREEN_BG);
 
-		case COMMENT:
-		case MLCOMMENT:
+		case SYMBOL:
 			*len = COLOR_LEN;
-			return strdup(OVERLAY_0_BG);
+			return strdup(SKY_BG);
 
-		case KEYWORD1:
+		case COMMENT:;
+		case MLCOMMENT:;
+					   /*
+			char *color = malloc(COLOR_LEN * 2 + 1);
+			snprintf(color, COLOR_LEN * 2 + 1, "\033[3m%s\033[23m", OVERLAY_2_BG);
+			*len = COLOR_LEN * 2;
+			return color;*/
+			*len = COLOR_LEN;
+			return strdup(OVERLAY_2_BG);
+
+		case KW:
 			*len = COLOR_LEN;
 			return strdup(MAUVE_BG);
 
-		case KEYWORD2:
+		case KW_TYPE:
 			*len = COLOR_LEN;
 			return strdup(YELLOW_BG);
 
+		case KW_FN:
+			*len = COLOR_LEN;
+			return strdup(BLUE_BG);
+
+		case KW_BRACKET:
+			*len = COLOR_LEN;
+			return strdup(RED_BG);
+
 		case MATCH:;
-				   char *str = malloc(COLOR_LEN * 2 + 1);
-				   snprintf(str, COLOR_LEN * 2 + 1, "%s%s", BLACK_BG, SKY_FG);
-				   *len = COLOR_LEN * 2;
-				   return str;
+			char *str = malloc(COLOR_LEN * 2 + 1);
+			snprintf(str, COLOR_LEN * 2 + 1, "%s%s", BLACK_BG, SKY_FG);
+			*len = COLOR_LEN * 2;
+			return str;
 
 		case RESET:;
-				   char *res = malloc(COLOR_LEN * 2 + 1);
-				   snprintf(res, COLOR_LEN * 2 + 1, "%s%s", WHITE_BG, BLACK_FG);
-				   *len = COLOR_LEN * 2;
-				   return res;
+			char *res = malloc(COLOR_LEN * 2 + 1);
+			snprintf(res, COLOR_LEN * 2 + 1, "%s%s", WHITE_BG, BLACK_FG);
+			*len = COLOR_LEN * 2;
+			return res;
 
 		default: 
-				   *len = COLOR_LEN;
-				   return strdup(WHITE_BG);
+			*len = COLOR_LEN;
+			return strdup(WHITE_BG);
 	}
 }
 
@@ -904,6 +966,10 @@ void handle_sigwinch(int ignore)
 
 int main(int argc, char **argv)
 {
+	if (get_window_size(&rows, &cols) == -1) {
+		die("get_window_size");
+	}
+
 	struct sigaction sa;
 	sa.sa_handler = handle_sigwinch;
 	sa.sa_flags = SA_RESTART;
@@ -1142,6 +1208,11 @@ int main(int argc, char **argv)
 							} else {
 								/* Fork failed */
 							}
+						}
+					} else if (c == 't') {
+						c = readch();
+						if (c > '0' && c <= '9') {
+							cur_editor = &editor[c - '0'];
 						}
 					}
 					break;

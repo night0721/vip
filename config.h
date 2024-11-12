@@ -6,7 +6,7 @@
 /* 38 and 48 is reversed as bar's color is reversed */
 
 #define SURFACE_1_BG "\033[38;2;049;050;068m"
-#define OVERLAY_0_BG "\033[38;2;108;112;134m"
+#define OVERLAY_2_BG "\033[38;2;147;153;178m"
 #define BLACK_FG     "\033[48;2;000;000;000m"
 #define BLACK_BG     "\033[38;2;000;000;000m"
 #define WHITE_FG     "\033[48;2;205;214;244m"
@@ -50,10 +50,13 @@ enum modes {
 
 enum highlight {
 	DEFAULT = 0,
+	SYMBOL,
 	COMMENT,
 	MLCOMMENT,
-	KEYWORD1, /* default */
-	KEYWORD2, /* types */
+	KW,
+	KW_TYPE,
+	KW_FN,
+	KW_BRACKET,
 	STRING,
 	NUMBER,
 	MATCH,
@@ -75,7 +78,6 @@ typedef struct {
 
 typedef struct {
 	char *filetype;
-	int flags;
 	char *singleline_comment_start;
 	char *multiline_comment_start;
 	char *multiline_comment_end;
@@ -97,17 +99,13 @@ typedef struct {
 	language_t *syntax;
 } editor_t;
 
-#define HL_NUMBERS (1 << 0)
-#define HL_STRINGS (1 << 1)
-
 language_t langs[] = {
 	{
 		"c",
-		HL_NUMBERS | HL_STRINGS,
 		"//",
 		"/*",
 		"*/",
-		{ "switch", "if", "while", "for", "break", "continue", "return", "else", "struct", "union", "typedef", "static", "enum", "case", "sizeof", "#include", "#define", "#if", "#elseif", "#endif", "int|", "long|", "double|", "float|", "char|", "unsigned|", "void|", NULL },
+		{ "switch", "if", "while", "for", "break", "continue", "return", "else", "struct", "union", "typedef", "static", "enum", "case", "sizeof", "#include", "#define", "#if", "#elseif", "#endif", "int|", "long|", "double|", "float|", "char|", "unsigned|", "void|", "size_t|", "uint8_t|", NULL },
 		{ ".c", ".h", ".cpp", NULL },
 	},
 };
