@@ -171,12 +171,13 @@ void refresh_screen(void)
 	if (cur_editor->rx < cur_editor->coloff) {
 		cur_editor->coloff = cur_editor->rx;
 	}
-	if (cur_editor->rx >= cur_editor->coloff + cols) {
-		cur_editor->coloff = cur_editor->rx - cols + 1;
-	}
 
-	if (!cat_mode)
+	if (!cat_mode) {
+		if (cur_editor->rx >= cur_editor->coloff + cols) {
+			cur_editor->coloff = cur_editor->rx - cols + 1;
+		}
 		bprintf("\033H\033[2 q");
+	}
 
 	draw_rows();
 	if (!cat_mode) {
@@ -580,10 +581,13 @@ void draw_rows(void)
 		} else {
 			int len = cur_editor->row[filerow].render_size - cur_editor->coloff;
 			if (len < 0) len = 0;
-			if (len > cols) len = cols;
+			if (!cat_mode && len > cols) len = cols;
 			char *c = &cur_editor->row[filerow].render[cur_editor->coloff];
 			unsigned char *hl = &cur_editor->row[filerow].hl[cur_editor->coloff];
 
+			FILE *f=fopen("/home/night/a", "a");
+			fprintf(f, "%s, cur_editor->coloff: %d\n", c, cur_editor->coloff);
+			fclose(f);
 			for (int j = 0; j < len; j++) {
 				if (iscntrl(c[j])) {
 					bprintf("%s%c\033[m", OVERLAY_2_BG, '@' + c[j]);
@@ -999,7 +1003,6 @@ void select_syntax(void)
 
 void die(const char *s)
 {
-	cleanup();
 	perror(s);
 	exit(1);
 }
@@ -1015,28 +1018,27 @@ void handle_sigwinch(int ignore)
 
 int main(int argc, char **argv)
 {
-	struct sigaction sa;
-	sa.sa_handler = handle_sigwinch;
-	sa.sa_flags = SA_RESTART;
-	sigemptyset(&sa.sa_mask);
-
-	if (sigaction(SIGWINCH, &sa, NULL) == -1) {
-		perror("sigaction");
-		exit(1);
-	}
-
-	if (tcgetattr(STDIN_FILENO, &oldt) == -1) {
-		die("tcgetattr");
-	}
-
 	if (argc > 2 && !strcmp(argv[1], "-c")) {
 		cat_mode = 1;
 	} else {
+		struct sigaction sa;
+		sa.sa_handler = handle_sigwinch;
+		sa.sa_flags = SA_RESTART;
+		sigemptyset(&sa.sa_mask);
+
+		if (sigaction(SIGWINCH, &sa, NULL) == -1) {
+			perror("sigaction");
+			exit(1);
+		}
+
+		if (tcgetattr(STDIN_FILENO, &oldt) == -1) {
+			die("tcgetattr");
+		}
 		if (get_window_size(&rows, &cols) == -1) {
 			die("get_window_size");
 		}
 		bprintf("\033[?1049h\033[2J\033[2q");
-		
+
 		newt = oldt;
 		/* Disable canonical mode and echo */
 		newt.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
@@ -1057,7 +1059,6 @@ int main(int argc, char **argv)
 	}
 
 	if (cat_mode) {
-		cleanup();
 		refresh_screen();
 		return 0;
 	}
@@ -1302,8 +1303,7 @@ void cleanup(void)
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &oldt) == -1) {
 		die("tcsetattr");
 	}
-	if (!cat_mode)
-		bprintf("\033[2J\033[?1049l");
+	bprintf("\033[2J\033[?1049l");
 }
 
 /*
