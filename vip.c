@@ -875,18 +875,15 @@ void update_highlight(row_t *row)
 				continue;
 			}
 			/* Check for function */
-			/* Assume maximum function name is 128 characters */
-			char word[128];
 			int word_len = 0;
 			while (!is_separator(row->render[i])) {
-				word[word_len++] = row->render[i++];
+				word_len++ = row->render[i++];
 			}
-			word[word_len] = '\0';
 			if (row->render[i] == '(') {
 				memset(&row->hl[i - word_len], KW_FN, word_len);
 				prev_sep = 1;
 			} else {
-				prev_sep = 0;
+				prev_sep = is_seperator(row->render[i]);
 			}
 			continue;
 		}
