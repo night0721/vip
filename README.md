@@ -1,9 +1,10 @@
 # vip
-VI Plus
+Small, fast and featureful vim-insipired text editor with strictly no dependency.
 
 # Usage
 ```sh
-vip
+vip file
+vip -c file
 ```
 
 # Dependencies
