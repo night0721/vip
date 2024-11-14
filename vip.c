@@ -1112,7 +1112,6 @@ int main(int argc, char **argv)
 				}
 				break;
 
-			case CTRL_KEY('l'):
 			case '\033':
 				if (cur_editor->mode == INSERT) {
 					move_xy(ARROW_LEFT);
