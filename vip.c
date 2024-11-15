@@ -1083,6 +1083,10 @@ int main(int argc, char **argv)
 			case '8': case '9':
 				action = COUNTING;
 				cmd[cmd_len++] = c;
+				cmd[cmd_len] = '\0';
+				/* cmd occupy 10 char and add a trailing space*/
+				int lpadding = cols - 11;
+				wpprintw("%*s%-10s ", lpadding, "", cmd);
 				break;
 
 			case HOME_KEY:
@@ -1229,7 +1233,6 @@ int main(int argc, char **argv)
 						memset(&cmd, 0, MAX_COMMAND_SIZE);
 					} else {
 						move_xy(ARROW_DOWN);
-						wpprintw("%d", DELETE);
 					}
 					break;
 				}
