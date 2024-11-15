@@ -47,7 +47,7 @@ enum keys {
 };
 
 enum actions {
-	COUNTING,
+	COUNTING = 500,
 	DELETE
 };
 

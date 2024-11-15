@@ -185,8 +185,8 @@ void refresh_screen(void)
 	draw_rows();
 	if (!cat_mode) {
 		draw_status_bar();
-		move_cursor((cur_editor->y - cur_editor->rowoff) + 1,
-				(cur_editor->rx - cur_editor->coloff) + 1);
+		move_cursor(cur_editor->y - cur_editor->rowoff + 1,
+				cur_editor->rx - cur_editor->coloff + 1 + 7);
 	}
 }
 
@@ -1229,6 +1229,7 @@ int main(int argc, char **argv)
 						memset(&cmd, 0, MAX_COMMAND_SIZE);
 					} else {
 						move_xy(ARROW_DOWN);
+						wpprintw("%d", DELETE);
 					}
 					break;
 				}
