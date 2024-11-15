@@ -5,7 +5,8 @@
 /* THEME */
 /* 38 and 48 is reversed as bar's color is reversed */
 
-#define SURFACE_1_BG "\033[38;2;049;050;068m"
+#define SURFACE_0_BG "\033[38;2;49;50;68m"
+#define SURFACE_1_BG "\033[38;2;69;71;90m"
 #define OVERLAY_2_BG "\033[38;2;147;153;178m"
 #define BLACK_FG     "\033[40m"
 #define BLACK_BG     "\033[30m"

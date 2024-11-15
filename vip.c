@@ -100,7 +100,7 @@ void draw_status_bar(void)
 	}
 	int coord_len = snprintf(coord, sizeof(coord), " %d:%d ", cur_editor->y + 1, cur_editor->x + 1);
 
-	bprintf(SURFACE_1_BG); /* background */
+	bprintf(SURFACE_0_BG); /* background */
 	/* text */
 	switch (cur_editor->mode) {
 		case NORMAL:
@@ -120,7 +120,7 @@ void draw_status_bar(void)
 
 	while (file_len < cols) {
 		if (cols - mode_len - git_len - file_len == info_len + lines_len + coord_len) {
-			bprintf("%s%s", info, SURFACE_1_BG);
+			bprintf("%s%s", info, SURFACE_0_BG);
 			if (cur_editor->mode == NORMAL) {
 				bprintf(BLUE_FG);
 			} else if (cur_editor->mode == INSERT) {
@@ -585,11 +585,19 @@ void draw_rows(void)
 			char *c = &cur_editor->row[filerow].render[cur_editor->coloff];
 			unsigned char *hl = &cur_editor->row[filerow].hl[cur_editor->coloff];
 
+			int absydiff = abs(filerow - cur_editor->y);
+			if (absydiff == 0) {
+				int num_digits = snprintf(NULL, 0, "%d", cur_editor->y + 1);
+				int left_padding = (6 - num_digits) / 2;
+				int right_padding = 6 - num_digits - left_padding;
+
+				bprintf("%s%*s%d%*s ", SURFACE_1_BG, left_padding, "", cur_editor->y + 1, right_padding, "");
+			} else {
+				bprintf("%s%6d ", SURFACE_1_BG, absydiff);
+			}
 			for (int j = 0; j < len; j++) {
 				if (iscntrl(c[j])) {
 					bprintf("%s%c\033[m", OVERLAY_2_BG, '@' + c[j]);
-				} else if (hl[j] == NORMAL) {
-					bprintf("%s%c", WHITE_BG, c[j]);
 				} else {
 					switch (hl[j]) {
 						case NUMBER:
