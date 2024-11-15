@@ -46,11 +46,17 @@ enum keys {
 	PAGE_DOWN
 };
 
+enum actions {
+	COUNTING,
+	DELETE
+};
+
 enum modes {
 	NORMAL,
 	INSERT,
 	VISUAL,
-	COMMAND
+	COMMAND,
+	PENDING0,
 };
 
 enum highlight {
@@ -121,4 +127,4 @@ language_t langs[] = {
 #define LANGS_LEN (sizeof(langs) / sizeof(langs[0]))
 
 #define CTRL_KEY(k) ((k) & 0x1f)
-#define COLOR_LEN 19
+#define MAX_COMMAND_SIZE 512

@@ -23,6 +23,9 @@ int rows, cols;
 editor_t editor[9];
 int editors = 0;
 editor_t *cur_editor;
+int action = DEFAULT;
+char cmd[MAX_COMMAND_SIZE];
+int cmd_len = 0;
 
 void draw_status_bar(void);
 void refresh_screen(void);
@@ -1076,6 +1079,12 @@ int main(int argc, char **argv)
 				insert_new_line();
 				break;
 
+			case '1': case '2': case '3': case '4': case '5': case '6': case '7':
+			case '8': case '9':
+				action = COUNTING;
+				cmd[cmd_len++] = c;
+				break;
+
 			case HOME_KEY:
 				cur_editor->x = 0;
 				break;
@@ -1211,7 +1220,16 @@ int main(int argc, char **argv)
 
 			case 'j': /* PASSTHROUGH */
 				if (cur_editor->mode != INSERT) {
-					move_xy(ARROW_DOWN);
+					if (action == COUNTING) {
+						for (int i = 0; i < atoi(cmd); i++) {
+							move_xy(ARROW_DOWN);
+						}
+						action = DEFAULT;
+						cmd_len = 0;
+						memset(&cmd, 0, MAX_COMMAND_SIZE);
+					} else {
+						move_xy(ARROW_DOWN);
+					}
 					break;
 				}
 
@@ -1243,7 +1261,12 @@ int main(int argc, char **argv)
 
 			case '0': /* PASSTHROUGH */
 				if (cur_editor->mode == NORMAL) {
-					cur_editor->x = 0;
+					if (cmd_len == 0) {
+						cur_editor->x = 0;
+					} else {
+						action = COUNTING;
+						cmd[cmd_len++] = c;
+					}
 					break;
 				}
 
