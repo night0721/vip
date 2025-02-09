@@ -5,7 +5,7 @@ It has colorful syntax highlighting and integrate with [ccc](https://github.com/
 
 # Usage
 ```sh
-vip -c file # Cat mode
+vip -c file # Cat(1) mode with syntax highlighting
 vip file
 ```
 

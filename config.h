@@ -119,7 +119,7 @@ language_t langs[] = {
 		"//",
 		"/*",
 		"*/",
-		{ "const", "switch", "if", "while", "for", "break", "continue", "return", "else", "struct", "union", "typedef", "static", "enum", "case", "sizeof", "#include", "#define", "#if", "#elseif", "#endif", "int|", "long|", "double|", "float|", "char|", "unsigned|", "void|", "size_t|", "uint8_t|", NULL },
+		{ "const", "default", "switch", "if", "while", "for", "break", "continue", "return", "else", "struct", "union", "typedef", "static", "enum", "case", "sizeof", "#include", "#define", "#if", "#elseif", "#endif", "int|", "short|", "long|", "double|", "float|", "char|", "unsigned|", "void|", "size_t|", "uint8_t|", NULL },
 		{ ".c", ".h", ".cpp", NULL },
 	},
 };

@@ -782,11 +782,21 @@ int is_symbol(int c)
 }
 
 void update_highlight(row_t *row)
-{
+{	
 	row->hl = realloc(row->hl, row->render_size);
 	memset(row->hl, NORMAL, row->render_size);
 
 	if (cur_editor->syntax == NULL) return;
+
+	if (strcmp(cur_editor->syntax->filetype, "c")) return;
+	// diff
+	// --- YELLOW
+	// +++ PEACH
+	// @@ OVERLAY0
+	// index TEAL
+	// diff BLUE
+	// + GREEN
+	// - RED
 
 	char **keywords = cur_editor->syntax->keywords;
 
